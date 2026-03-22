@@ -355,6 +355,8 @@ const PERP_EDU = [
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 const SK={res:"ms_res_v5",cons:"ms_cons_v1",auth:"ms_auth_v2",prices:"ms_prices_v1"};
+// תאימות לאחור — אם יש auth ישן, העבר אותו
+(()=>{try{const old=localStorage.getItem("ms_auth_v1");if(old&&!localStorage.getItem("ms_auth_v2")){const p=JSON.parse(old);localStorage.setItem("ms_auth_v2",JSON.stringify({...p,use2fa:false}));}}catch{}})();
 const ld=(k,d)=>{try{const s=localStorage.getItem(k);return s?JSON.parse(s):d;}catch{return d;}};
 const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
 const fmt=n=>n==null?"—":`$${Number(n).toFixed(2)}`;
