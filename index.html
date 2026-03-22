@@ -9,605 +9,741 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;background:#f0f4ff;min-height:100vh;font-size:14px;}</style>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4ff; min-height: 100vh; font-size: 14px; }
+input, select, button { font-family: inherit; }
+::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #f1f5f9; } ::-webkit-scrollbar-thumb { background: #93c5fd; border-radius: 3px; }
+</style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useMemo, useEffect, useRef } = React;
 
-const INIT_RESELLERS = [
-  { name:"A.C.S.S", nameHe:"איי.סי.אס.אס", id:"038002", discount:15, address:"שארית הפליטה 34, חיפה", phone:"", email:"", contacts:[] },
-  { name:"A.I. Umbrella It Ltd.", nameHe:"א.ל. אמברלה אי-טי", id:"064961", discount:12.5, address:"יגיע כפיים 2, תא", phone:"", email:"", contacts:[] },
-  { name:"A.R.Win Technologies Ltd", nameHe:"א.ר.ווין טכנולוגיות", id:"082368", discount:12.5, address:"בעל שם טוב 38, פת", phone:"", email:"", contacts:[] },
-  { name:"Access Technologies Ltd", nameHe:"", id:"010322", discount:12.5, address:"", phone:"", email:"", contacts:[] },
-  { name:"All.i.t Ltd.", nameHe:"אול.איי.טי", id:"074304", discount:12.5, address:"היצירה 371, משען", phone:"", email:"", contacts:[] },
-  { name:"Altec Business Computing Ltd", nameHe:"אלטק מחשוב לעסקים", id:"081323", discount:13.5, address:"ת.ד. 337, אשקלון", phone:"", email:"", contacts:[] },
-  { name:"Atlantic Ltd", nameHe:"אטלנטיק מחשבים", id:"010851", discount:12.5, address:"כיכר וייצמן 15, חולון", phone:"", email:"", contacts:[] },
-  { name:"Azuz IT Solutions", nameHe:"", id:"081738", discount:12.5, address:"", phone:"", email:"", contacts:[] },
-  { name:"backmen computers", nameHe:"בקמן מחשבים", id:"080985", discount:12.5, address:"רמת הכובש", phone:"", email:"", contacts:[] },
-  { name:"Bar Digital", nameHe:"", id:"082219", discount:14.5, address:"", phone:"", email:"", contacts:[] },
-  { name:"Ben Binyamin Technologies Ltd", nameHe:"בן בנימין טכנולוגיות", id:"015685", discount:12.5, address:"לחי 25, בני ברק", phone:"", email:"", contacts:[] },
-  { name:"BGPC", nameHe:"", id:"082479", discount:12.5, address:"", phone:"", email:"", contacts:[] },
-  { name:"Browarnik LTD", nameHe:"אקספרטוס ברוורניק", id:"080227", discount:13, address:"בית לחם 54, ירושלים", phone:"", email:"", contacts:[] },
-  { name:"Cambrinx Group Ltd", nameHe:"קבוצת קיימבריקס", id:"042054", discount:14, address:"רבקה 19, ירושלים", phone:"", email:"", contacts:[] },
-  { name:"Com Media$", nameHe:"קום מדיה", id:"080413", discount:12.5, address:"הותיקים 14, אבן יהודה", phone:"", email:"", contacts:[] },
-  { name:"Com-Net supporting Ltd", nameHe:"קום-נט תמיכה", id:"014100", discount:14, address:"דוד סחרוב 17, ראשון לציון", phone:"", email:"", contacts:[] },
-  { name:"CPU Computers LTD", nameHe:"", id:"083246", discount:12.5, address:"", phone:"", email:"", contacts:[] },
-  { name:"CTS engineering", nameHe:"", id:"082427", discount:12.5, address:"", phone:"", email:"", contacts:[] },
-  { name:"Daat Computers", nameHe:"דעת מחשבים", id:"030272", discount:12.5, address:"הנביאים 68, ירושלים", phone:"", email:"", contacts:[] },
-  { name:"Danet Ltd", nameHe:"ד.נ.ת. מחשוב", id:"024343", discount:15, address:"החרושת 19, רעננה", phone:"", email:"", contacts:[] },
-  { name:"ddcom group ltd", nameHe:"קבוצת דידיקום", id:"083044", discount:12.5, address:"ישראל זנגוויל 22, ירושלים", phone:"", email:"", contacts:[] },
-  { name:"Dgm Communication Ltd", nameHe:"דגם תקשורת", id:"010613", discount:12.5, address:"הדשנים 13, חיפה", phone:"", email:"", contacts:[] },
-  { name:"Dortech Nihul Marachot", nameHe:"דורטק ניהול מערכות", id:"054024", discount:12.5, address:"זבוטינסקי 7, רמת גן", phone:"", email:"", contacts:[] },
-  { name:"E.L.K Comprehensive IT Solutions Ltd", nameHe:"אי.אל.קיי.", id:"029441", discount:12.5, address:"מדינת היהודים 62, הרצליה", phone:"", email:"", contacts:[] },
-  { name:"EDA PC", nameHe:"אי די אי פי סי", id:"082733", discount:13, address:"שביט 13, באר יעקב", phone:"", email:"", contacts:[] },
-  { name:"Edi Solutions", nameHe:"אדי פתרונות", id:"028221", discount:12.5, address:"גינצבורג 6, ראשון לציון", phone:"", email:"", contacts:[] },
-  { name:"Egoz Systems", nameHe:"אגוז מערכות", id:"046936", discount:12.5, address:"איילת השחר", phone:"", email:"", contacts:[] },
-  { name:"EICom Computers", nameHe:"אלקום מחשבים", id:"010631", discount:12.5, address:"נחל הבשור 70, טל שחר", phone:"", email:"", contacts:[] },
-  { name:"EXCELLENT I.T Ltd", nameHe:"אקסלנט איי.טי.", id:"073342", discount:14, address:"החורטים 8, חולון", phone:"", email:"", contacts:[] },
-  { name:"Expim Ltd", nameHe:"אקספים", id:"030608", discount:14, address:"מעבר יבוק 5, תא", phone:"", email:"", contacts:[] },
-  { name:"F1 Computing Solutions Ltd", nameHe:"אפ-1 פתרונות מחשוב", id:"080021", discount:12.5, address:"הכשרת היישוב 23, ראשון לציון", phone:"", email:"", contacts:[] },
-  { name:"Gal Amar Computers LTD", nameHe:"גל עמר מחשבים", id:"083142", discount:12.5, address:"בנימין מטודלה 30, ירושלים", phone:"", email:"", contacts:[] },
-  { name:"GiBS Computers Ltd", nameHe:"גיבס מחשבים", id:"072883", discount:12.5, address:"הררי 7, רמת גן", phone:"", email:"", contacts:[] },
-  { name:"Gotec Smart Communication", nameHe:"", id:"025460", discount:15, address:"", phone:"", email:"", contacts:[] },
-  { name:"Guy Shivuk", nameHe:"גיא שיווק", id:"028827", discount:14, address:"איכילוב 13, פת", phone:"", email:"", contacts:[] },
-  { name:"Head Computer Systems Ltd", nameHe:"ראש מערכות מחשב", id:"029891", discount:12.5, address:"כלנית 73, מבשרת ציון", phone:"", email:"", contacts:[] },
-  { name:"High-Net Ltd", nameHe:"היי-נט", id:"028723", discount:13.5, address:"ת.ד. 550, קרית ים", phone:"", email:"", contacts:[] },
-  { name:"Hilkaltex sh.y.(1988) Ltd", nameHe:"הילקלטקס ש.י", id:"082841", discount:14, address:"דרך מנחם בגין 154, תא", phone:"", email:"", contacts:[] },
-  { name:"HIT Computing Solutions", nameHe:"", id:"082308", discount:12.5, address:"", phone:"", email:"", contacts:[] },
-  { name:"I support", nameHe:"", id:"080252", discount:12.5, address:"", phone:"", email:"", contacts:[] },
-  { name:"I.S.O", nameHe:"ש.י.א ייזום ופיתוח", id:"080206", discount:13.5, address:"השיזף 15, נתניה", phone:"", email:"", contacts:[] },
-  { name:"IT 4 You Ltd", nameHe:"אי.טי.4.יו", id:"073461", discount:15, address:"לחי 28, בני ברק", phone:"", email:"", contacts:[] },
-  { name:"ITeam SH LTD", nameHe:"אייתים אס אייץ", id:"081011", discount:12.5, address:"התעשיה 5, רמלה", phone:"", email:"", contacts:[] },
-  { name:"ITMS Computing & Data security LTD", nameHe:"", id:"082470", discount:12.5, address:"", phone:"", email:"", contacts:[] },
-  { name:"JSR Electronic Services Ltd", nameHe:"גשר שירותי אלקטרוניקה", id:"013258", discount:12.5, address:"ת.ד 765, יבנה", phone:"", email:"", contacts:[] },
-  { name:"katom IT LTD", nameHe:"כתום מיחשוב", id:"082474", discount:15, address:"דרך הדרום 9, קרית גת", phone:"", email:"", contacts:[] },
-  { name:"Kedem Dor Computers Ltd", nameHe:"קדם דור מחשבים", id:"012481", discount:15, address:"בונה אליעזר 9, חיפה", phone:"", email:"", contacts:[] },
-  { name:"Litos Computers Ltd", nameHe:"ליטוס מחשבים", id:"020035", discount:12.5, address:"תובל 22, רמת גן", phone:"", email:"", contacts:[] },
-  { name:"Lumyns Information Systems Ltd", nameHe:"לומינס מערכות מידע", id:"056089", discount:12.5, address:"תכלת 3, תרדיון", phone:"", email:"", contacts:[] },
-  { name:"M.D.S. Eliran Computers Ltd", nameHe:"אמ.די.אס אלירן", id:"010062", discount:12.5, address:"דרך השלום 9, נשר", phone:"", email:"", contacts:[] },
-  { name:"Medatech Systems Ltd", nameHe:"מידעטק מערכות", id:"035349", discount:15, address:"הסדנא 3, טירת כרמל", phone:"", email:"", contacts:[] },
-  { name:"MegaBite", nameHe:"מגהבייט", id:"080164", discount:14.5, address:"אפשטיין 6, תא", phone:"", email:"", contacts:[] },
-  { name:"Meir Rafaelo - Sivim computers", nameHe:"", id:"082252", discount:12.5, address:"", phone:"", email:"", contacts:[] },
-  { name:"MIRAGE IT ADVANCED TECHNOLOGIES LTD", nameHe:"", id:"082536", discount:14.5, address:"", phone:"", email:"", contacts:[] },
-  { name:"MYTNET TECHNOLOGIES", nameHe:"מייטינט טכנולוגיות", id:"080970", discount:12.5, address:"ת.ד.570, רעננה", phone:"", email:"", contacts:[] },
-  { name:"Natan-Or.Computers and Networks", nameHe:"נתן-אור", id:"081776", discount:14, address:"אבי דוד 11, גני מודיעין", phone:"", email:"", contacts:[] },
-  { name:"NetCare Ltd", nameHe:"", id:"016471", discount:12.5, address:"", phone:"", email:"", contacts:[] },
-  { name:"Netprofessional Technologies", nameHe:"נטפרופשיונל טכנולוגיות", id:"076096", discount:12.5, address:"ההדס 18, תל מונד", phone:"", email:"", contacts:[] },
-  { name:"Oriental Computers System Ltd", nameHe:"אוריינטל מערכות מיחשוב", id:"010849", discount:12.5, address:"המפעל 10, אור יהודה", phone:"", email:"", contacts:[] },
-  { name:"Pelican Tech Ltd", nameHe:"", id:"082006", discount:15, address:"", phone:"", email:"", contacts:[] },
-  { name:"Point Computers Ltd", nameHe:"", id:"017772", discount:13.5, address:"", phone:"", email:"", contacts:[] },
-  { name:"PR IT INOVIT LTD", nameHe:"", id:"083210", discount:15, address:"", phone:"", email:"", contacts:[] },
-  { name:"rd tech computers Ltd", nameHe:"", id:"081122", discount:15, address:"", phone:"", email:"", contacts:[] },
-  { name:"REUTONE A.Y LTD", nameHe:"", id:"081729", discount:15, address:"", phone:"", email:"", contacts:[] },
-  { name:"ROS SOLUTIONS LTD", nameHe:"אר.או.אס סולושיינס", id:"082269", discount:12.5, address:"כפר סבא", phone:"", email:"", contacts:[] },
-  { name:"S.C. Car Netsolutions", nameHe:"אס. סי. קאר נטסולושנס", id:"062558", discount:14, address:"עתיר ידע 5, כפר סבא", phone:"", email:"", contacts:[] },
-  { name:"S.A.I INFORMATION TECHNOLOGY LTD", nameHe:"ס.א.ל טכנולוגיות מידע", id:"081539", discount:12.5, address:"השיקמים 3, אור עקיבא", phone:"", email:"", contacts:[] },
-  { name:"Saycom", nameHe:"סייקום", id:"081068", discount:12.5, address:"פת", phone:"", email:"", contacts:[] },
-  { name:"Seetech Solutions Ltd", nameHe:"סיטק פתרונות", id:"062287", discount:12.5, address:"רמת גן", phone:"", email:"", contacts:[] },
-  { name:"Shiran Communication Ltd", nameHe:"שירן תקשורת", id:"054759", discount:12.5, address:"רחבעם זאבי 2, גבעת שמואל", phone:"", email:"", contacts:[] },
-  { name:"Simplicity Solutions Ltd", nameHe:"סימפליסיטי סולושנס", id:"024987", discount:12.5, address:"גיבורי ישראל 20, נתניה", phone:"", email:"", contacts:[] },
-  { name:"Softsale Ltd", nameHe:"", id:"031918", discount:14.5, address:"", phone:"", email:"", contacts:[] },
-  { name:"Spider Solutions Ltd", nameHe:"ספיידר פתרונות", id:"027140", discount:15, address:"המלאכה 10, ראש העין", phone:"", email:"", contacts:[] },
-  { name:"SYNERGY IT SYSTEMS LTD", nameHe:"סינרגיה מערכות מחשוב", id:"081715", discount:12.5, address:"קהילת סלוניקי 7, תא", phone:"", email:"", contacts:[] },
-  { name:"Sysmate Ltd", nameHe:"סיסמייט", id:"080611", discount:12.5, address:"נשר", phone:"", email:"", contacts:[] },
-  { name:"Take Care Data", nameHe:"טייק קר דאטא", id:"066737", discount:14, address:"ההגנה 13, ראשון לציון", phone:"", email:"", contacts:[] },
-  { name:"Take Off Technologies Ltd", nameHe:"טייק אוף טכנולוגיות", id:"021513", discount:12.5, address:"מוריה 5, רמת השרון", phone:"", email:"", contacts:[] },
-  { name:"Tamir Shen", nameHe:"תמיר שן", id:"015393", discount:12.5, address:"חטיבת גולני 46, רעננה", phone:"", email:"", contacts:[] },
-  { name:"TECH-SELECT COMPUTER SERVICES LTD", nameHe:"טק-סלקט", id:"081963", discount:12.5, address:"תא", phone:"", email:"", contacts:[] },
-  { name:"Trio Cloud Technologies Ltd", nameHe:"טריו טכנולוגיות ענן", id:"080698", discount:14, address:"הרוקמים 25, חולון", phone:"", email:"", contacts:[] },
-  { name:"Y.H.M TECHNOLOGIES LTD", nameHe:"י.ח.מ. טכנולוגיות", id:"081765", discount:15, address:"מנחם בגין 132, תא", phone:"", email:"", contacts:[] },
-  { name:"YBD SYSTEM LTD", nameHe:"", id:"083194", discount:12.5, address:"", phone:"", email:"", contacts:[] },
-  { name:"Y-Tech Solutions Ltd", nameHe:"וואי-טק פתרונות", id:"060208", discount:14.5, address:"עמל 13, ראש העין", phone:"", email:"", contacts:[] },
+// ── RESELLERS ────────────────────────────────────────────────────────────────
+const DEFAULT_RESELLERS = [
+  { name:"A.C.S.S", nameHe:"איי.סי.אס.אס", id:"038002", discount:15, phone:"", email:"", address:"שארית הפליטה 34, חיפה" },
+  { name:"A.I. Umbrella It Ltd.", nameHe:"א.ל. אמברלה אי-טי", id:"064961", discount:12.5, phone:"", email:"", address:"יגיע כפיים 2, ת\"א" },
+  { name:"A.R.Win Technologies Ltd", nameHe:"א.ר.ווין טכנולוגיות", id:"082368", discount:12.5, phone:"", email:"", address:"בעל שם טוב 38, פ\"ת" },
+  { name:"Access Technologies Ltd", nameHe:"", id:"010322", discount:12.5, phone:"", email:"", address:"" },
+  { name:"All.i.t Ltd.", nameHe:"אול.איי.טי", id:"074304", discount:12.5, phone:"", email:"", address:"היצירה 371, משען" },
+  { name:"Altec Business Computing Ltd", nameHe:"אלטק מחשוב לעסקים", id:"081323", discount:13.5, phone:"", email:"", address:"" },
+  { name:"Aviv Technologies Ltd.", nameHe:"אביב טכנולוגיות", id:"066052", discount:12.5, phone:"", email:"", address:"" },
+  { name:"B.G.S Systems Ltd", nameHe:"בי.ג'י.אס מערכות", id:"068558", discount:12.5, phone:"", email:"", address:"" },
+  { name:"BGN Technologies Israel LTD.", nameHe:"", id:"083143", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Bynet Data Communications", nameHe:"ביינט תקשורת נתונים", id:"002697", discount:15, phone:"", email:"", address:"" },
+  { name:"C.A.T Networks Ltd.", nameHe:"", id:"064960", discount:12.5, phone:"", email:"", address:"" },
+  { name:"C.M.S. Compucenter Ltd.", nameHe:"סי.אם.אס קומפיוסנטר", id:"003163", discount:15, phone:"03-6721000", email:"info@cms.co.il", address:"" },
+  { name:"Comm-IT Ltd.", nameHe:"קום-איט", id:"066779", discount:15, phone:"", email:"", address:"" },
+  { name:"Com-Media Ltd.", nameHe:"קום-מדיה", id:"003516", discount:13.5, phone:"", email:"", address:"" },
+  { name:"Consort IT Ltd", nameHe:"קונסורט", id:"082682", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Coretech Ltd.", nameHe:"קורטק", id:"062783", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Cyclone Solutions Ltd.", nameHe:"", id:"082148", discount:12.5, phone:"", email:"", address:"" },
+  { name:"D.M.M. Net Ltd.", nameHe:"", id:"068048", discount:12.5, phone:"", email:"", address:"" },
+  { name:"DataGuard Israel ltd", nameHe:"", id:"082946", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Datavision International Ltd.", nameHe:"דטהויז'ן אינטרנשיונל", id:"081985", discount:12.5, phone:"", email:"", address:"" },
+  { name:"DIGIvision Ltd.", nameHe:"דיג'יויז'ן", id:"074003", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Dmission Ltd.", nameHe:"", id:"082553", discount:12.5, phone:"", email:"", address:"" },
+  { name:"DNS Technologies Ltd.", nameHe:"", id:"068073", discount:12.5, phone:"", email:"", address:"" },
+  { name:"E.E.S. Ltd.", nameHe:"", id:"026558", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Elad Systems Ltd.", nameHe:"אלעד מערכות", id:"004071", discount:15, phone:"", email:"", address:"" },
+  { name:"ENS - eSolutions And Networks Ltd.", nameHe:"", id:"063001", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Equinox Computing Ltd.", nameHe:"אקוינוקס", id:"075143", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Estone Technologies Ltd", nameHe:"", id:"082742", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Eurekah Ltd.", nameHe:"", id:"082073", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Evoca Technologies", nameHe:"", id:"083005", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Flynet Ltd.", nameHe:"", id:"082453", discount:12.5, phone:"", email:"", address:"" },
+  { name:"GCS - Global Computer Solutions Ltd.", nameHe:"", id:"065264", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Gilat Telecom Ltd.", nameHe:"גילת טלקום", id:"047220", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Global Point Technologies Ltd.", nameHe:"", id:"082108", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Hadassah Academic College", nameHe:"מכללת הדסה", id:"083109", discount:12.5, phone:"", email:"", address:"" },
+  { name:"HotNet Internet Services Ltd.", nameHe:"הוטנט", id:"044891", discount:12.5, phone:"", email:"", address:"" },
+  { name:"HyperNet Solutions Ltd.", nameHe:"", id:"082826", discount:12.5, phone:"", email:"", address:"" },
+  { name:"I.T. Power Ltd.", nameHe:"", id:"078200", discount:12.5, phone:"", email:"", address:"" },
+  { name:"ICT Group Ltd.", nameHe:"", id:"082699", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Inforeliance Ltd.", nameHe:"", id:"082579", discount:12.5, phone:"", email:"", address:"" },
+  { name:"InnoTec Computing Ltd.", nameHe:"", id:"082354", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Integration Factory Ltd.", nameHe:"", id:"082429", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Internext Systems Ltd.", nameHe:"", id:"060434", discount:12.5, phone:"", email:"", address:"" },
+  { name:"IsraCom Solutions Ltd.", nameHe:"", id:"082802", discount:12.5, phone:"", email:"", address:"" },
+  { name:"IT Consult Israel Ltd.", nameHe:"", id:"082699", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Kheper Networks Ltd.", nameHe:"", id:"082932", discount:12.5, phone:"", email:"", address:"" },
+  { name:"L.M. Technologies", nameHe:"", id:"082248", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Lanit Computer Systems Ltd.", nameHe:"לניט", id:"003862", discount:13.5, phone:"", email:"", address:"" },
+  { name:"Leadcom Integrated Solutions Ltd.", nameHe:"ליידקום", id:"003541", discount:13.5, phone:"", email:"", address:"" },
+  { name:"Malam-Team Ltd.", nameHe:"מלם-תים", id:"001863", discount:15, phone:"", email:"", address:"" },
+  { name:"Matrix IT Ltd.", nameHe:"מטריקס", id:"001970", discount:15, phone:"", email:"", address:"" },
+  { name:"MicroAge Israel", nameHe:"מיקרואייג' ישראל", id:"003279", discount:15, phone:"", email:"", address:"" },
+  { name:"Net Systems Ltd.", nameHe:"", id:"082551", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Netac Technologies Ltd.", nameHe:"", id:"082775", discount:12.5, phone:"", email:"", address:"" },
+  { name:"NetOne Communications", nameHe:"", id:"082668", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Netsec Ltd.", nameHe:"", id:"082891", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Network 1 Ltd.", nameHe:"", id:"081701", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Nextnet Ltd.", nameHe:"", id:"082136", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Nimda Technologies Ltd.", nameHe:"", id:"082919", discount:12.5, phone:"", email:"", address:"" },
+  { name:"OK Technologies Ltd.", nameHe:"", id:"082047", discount:12.5, phone:"", email:"", address:"" },
+  { name:"On Line Telecom Solutions Ltd.", nameHe:"", id:"054266", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Online Networks Ltd.", nameHe:"", id:"081983", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Oriental Software Ltd.", nameHe:"אוריינטל סופטוור", id:"002698", discount:15, phone:"", email:"", address:"" },
+  { name:"Orion Computing Ltd.", nameHe:"", id:"082019", discount:12.5, phone:"", email:"", address:"" },
+  { name:"P.C.S. Technologies Ltd.", nameHe:"", id:"064784", discount:12.5, phone:"", email:"", address:"" },
+  { name:"PC-Ware Israel Ltd.", nameHe:"", id:"082374", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Polar Communications Ltd.", nameHe:"פולר", id:"003048", discount:15, phone:"", email:"", address:"" },
+  { name:"Proact Israel Ltd.", nameHe:"פרואקט", id:"074601", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Radvision Ltd.", nameHe:"", id:"035905", discount:12.5, phone:"", email:"", address:"" },
+  { name:"RealCom Ltd.", nameHe:"", id:"082654", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Seetech Ltd.", nameHe:"סיטק", id:"003378", discount:15, phone:"", email:"", address:"" },
+  { name:"Shaam Technologies", nameHe:"שאם טכנולוגיות", id:"082198", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Shir Systems Ltd.", nameHe:"", id:"082321", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Shlomi Computers Ltd.", nameHe:"", id:"082481", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Shtifman Computing Ltd.", nameHe:"", id:"082024", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Softline Israel Ltd.", nameHe:"סופטליין ישראל", id:"082222", discount:12.5, phone:"", email:"", address:"" },
+  { name:"SQream Technologies Ltd.", nameHe:"", id:"082887", discount:12.5, phone:"", email:"", address:"" },
+  { name:"StepUp Technologies", nameHe:"", id:"082729", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Teldor Cables & Systems Ltd.", nameHe:"", id:"082166", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Telrad Networks Ltd.", nameHe:"", id:"010783", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Teracom Ltd.", nameHe:"", id:"082507", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Time On Line Ltd.", nameHe:"טיים און ליין", id:"027484", discount:13.5, phone:"", email:"", address:"" },
+  { name:"TopEx Ltd.", nameHe:"", id:"082532", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Total Systems Ltd.", nameHe:"", id:"082623", discount:12.5, phone:"", email:"", address:"" },
+  { name:"UpTime Technologies Ltd.", nameHe:"", id:"082450", discount:12.5, phone:"", email:"", address:"" },
+  { name:"Xtra Technologies Ltd.", nameHe:"", id:"082292", discount:12.5, phone:"", email:"", address:"" },
 ];
 
-const CONTACTS_RAW = [
-  { resellerId:"010849", name:"נמרוד קליינמן", role:"טכני", position:"בעלים", email:"NimrodK@Oriental.co.il", phone:"052-3502154" },
-  { resellerId:"010849", name:"יהל פינקלשטיין", role:"עסקי", position:"רכש", email:"yahelf@oriental.co.il", phone:"052-5111819" },
-  { resellerId:"010849", name:"עופר וינברג", role:"עסקי", position:"בעלים", email:"oferw@oriental.co.il", phone:"052-2781274" },
-  { resellerId:"028723", name:"שי זילבר", role:"עסקי", position:"מנכל", email:"shai@high-net.co.il", phone:"054-5214944" },
-  { resellerId:"028723", name:"זוהר זילבר", role:"טכני", position:"CTO", email:"Zohar@high-net.co.il", phone:"054-2363676" },
-  { resellerId:"028723", name:"איתי קידרון", role:"טכני", position:"טכני", email:"itay@high-net.co.il", phone:"054-2363675" },
-  { resellerId:"028723", name:"לינת", role:"עסקי", position:"רכש", email:"office@high-net.co.il", phone:"052-7242075" },
-  { resellerId:"030608", name:"לירון חדד", role:"עסקי", position:"בעלים", email:"liron@expim.co.il", phone:"052-5556961" },
-  { resellerId:"030608", name:"אופיר חדד", role:"טכני", position:"בעלים", email:"ofir@expim.co.il", phone:"" },
-  { resellerId:"030608", name:"סטפני", role:"עסקי", position:"רכש", email:"office@expim.co.il", phone:"052-4670850" },
-  { resellerId:"080227", name:"יוסי גרוס", role:"טכני", position:"טכני", email:"yossig@expertos.co.il", phone:"054-4935353" },
-  { resellerId:"080227", name:"אבל ברוורניק", role:"עסקי", position:"בעלים", email:"abel@expertos.co.il", phone:"054-2406410" },
-  { resellerId:"081011", name:"חזי חלוץ", role:"עסקי", position:"בעלים", email:"hezy@iteam-sh.co.il", phone:"058-6303866" },
-  { resellerId:"081011", name:"רונן סומברג", role:"טכני", position:"בעלים", email:"ronen@iteam-sh.co.il", phone:"050-3777520" },
-  { resellerId:"082841", name:"דניאל קלנר", role:"טכני", position:"בעלים", email:"daniel@octopuscs.com", phone:"050-4580420" },
-  { resellerId:"082841", name:"מיכאל קלנר", role:"עסקי", position:"מכירות", email:"michael@octopuscs.com", phone:"052-3427872" },
-  { resellerId:"010851", name:"הרצל", role:"עסקי", position:"בעלים", email:"herzelp@atlantic.co.il", phone:"052-5593030" },
-  { resellerId:"056089", name:"אלי חדד", role:"עסקי", position:"בעלים", email:"eli@lumyns.com", phone:"054-2646402" },
-  { resellerId:"082368", name:"ריקי", role:"עסקי", position:"מכירות", email:"riki@wintech.co.il", phone:"054-522-1299" },
-  { resellerId:"082368", name:"יגאל אברהם", role:"עסקי", position:"מכירות", email:"igal@wintech.co.il", phone:"054-3008636" },
-  { resellerId:"073342", name:"טוני", role:"טכני", position:"טכני", email:"toni@excellent.co.il", phone:"03-6885558" },
-  { resellerId:"073342", name:"גיל אריאל", role:"עסקי", position:"בעלים", email:"gill@excellnet.co.il", phone:"054-5858218" },
-  { resellerId:"054759", name:"גבי", role:"עסקי", position:"בעלים", email:"gabi@shirannet.co.il", phone:"052-6703305" },
-  { resellerId:"080970", name:"איתי אלון", role:"עסקי", position:"בעלים", email:"ittai@mytnet.co.il", phone:"072-2722772" },
-  { resellerId:"027140", name:"דייגו", role:"עסקי", position:"מנהל מכירות", email:"diego@spiderservices.com", phone:"077-2628020" },
-  { resellerId:"027140", name:"רפי קוקוטק", role:"עסקי", position:"בעלים", email:"rafik@spiderservices.com", phone:"050-5593666" },
-  { resellerId:"082733", name:"ערן עטר", role:"עסקי", position:"בעלים", email:"eran@edapc.co.il", phone:"054-6339940" },
-  { resellerId:"013258", name:"מוטי זאדה", role:"עסקי", position:"בעלים", email:"moti@jsrcomp.co.il", phone:"054-3244244" },
-  { resellerId:"054024", name:"אילנית", role:"עסקי", position:"מנהל מכירות", email:"ilanit@dortech.co.il", phone:"054-7581777" },
-  { resellerId:"062558", name:"שרון קרסיינטה", role:"עסקי", position:"בעלים", email:"sharonc@sccn.co.il", phone:"054-2473300" },
-  { resellerId:"014100", name:"דני טויטו", role:"עסקי", position:"בעלים", email:"dany@komnet.co.il", phone:"054-4992511" },
-  { resellerId:"080021", name:"שגיא וואן", role:"עסקי", position:"בעלים", email:"sagi@f1-net.co.il", phone:"050-5446804" },
-  { resellerId:"080164", name:"אייל קפלן", role:"עסקי", position:"בעלים", email:"info@mega-bite.co.il", phone:"050-7474474" },
-  { resellerId:"080164", name:"רותם", role:"טכני", position:"בעלים", email:"rotem@mega-bite.co.il", phone:"050-7461146" },
-  { resellerId:"012481", name:"דודי קדם", role:"עסקי", position:"בעלים", email:"dudi@kdc.co.il", phone:"052-3300800" },
-  { resellerId:"010062", name:"עמיר לוי", role:"עסקי", position:"מכירות", email:"amirl@mds.co.il", phone:"054-2446711" },
-  { resellerId:"062287", name:"שרון כספי", role:"עסקי", position:"בעלים", email:"sharonk@seetech.co.il", phone:"052-7979214" },
-  { resellerId:"062287", name:"אייל חיים", role:"עסקי", position:"בעלים", email:"Eyalh@seetech.co.il", phone:"052-7979216" },
-  { resellerId:"076096", name:"ענבל גיל", role:"עסקי", position:"בעלים", email:"inbalg@net-pro.co.il", phone:"054-3555594" },
-  { resellerId:"060208", name:"ריטה זאבי", role:"עסקי", position:"רכש", email:"ritaz@y-tech.net", phone:"052-5500566" },
-  { resellerId:"060208", name:"אלי כהן", role:"עסקי", position:"מנכל", email:"elic@y-tech.net", phone:"054-4428888" },
-  { resellerId:"060208", name:"תומר שוויצר", role:"עסקי", position:"בעלים", email:"tomers@y-tech.net", phone:"054-6697779" },
-  { resellerId:"060208", name:"משה הורביץ", role:"טכני", position:"טכני", email:"mosheh@y-tech.net", phone:"" },
-  { resellerId:"035349", name:"יוליה", role:"עסקי", position:"מכירות", email:"yulia_k@medatech.com", phone:"052-6443039" },
-  { resellerId:"035349", name:"יערה", role:"עסקי", position:"מנכל", email:"yaara@medatech.com", phone:"052-4561116" },
-  { resellerId:"081323", name:"אלכס סופר", role:"עסקי", position:"בעלים", email:"alex@altec.co.il", phone:"054-5713715" },
-  { resellerId:"081323", name:"יבגני", role:"טכני", position:"בעלים", email:"admin@altec.co.il", phone:"054-8179999" },
-  { resellerId:"080698", name:"שלומי", role:"עסקי", position:"בעלים", email:"shlomi@trio-cloud.com", phone:"052-2849859" },
-  { resellerId:"080413", name:"ירון בלומברג", role:"עסקי", position:"בעלים", email:"yaron@co-media.co.il", phone:"054-8040714" },
-  { resellerId:"080413", name:"אלעד אברהמי", role:"עסקי", position:"בעלים", email:"elad@co-media.co.il", phone:"" },
-  { resellerId:"024343", name:"רן ביטרמן", role:"עסקי", position:"מכירות", email:"Sales@danet.co.il", phone:"052-4045399" },
-  { resellerId:"024343", name:"אלכס מוטליס", role:"עסקי", position:"בעלים", email:"alex@danet.co.il", phone:"054-4289036" },
-  { resellerId:"066737", name:"סאלי", role:"טכני", position:"טכני", email:"sali@tcdata.co.il", phone:"050-4757776" },
-  { resellerId:"080985", name:"אייל מנדיל", role:"טכני", position:"טכני", email:"eyal@backmen.co.il", phone:"054-7748455" },
-  { resellerId:"080985", name:"שי בקמן", role:"עסקי", position:"בעלים", email:"shay@backmen.co.il", phone:"052-5595145" },
-  { resellerId:"015685", name:"יהושע בן בנימין", role:"עסקי", position:"בעלים", email:"josh@bbt.co.il", phone:"052-2452239" },
-  { resellerId:"073461", name:"יוסי עמארה", role:"עסקי", position:"", email:"yossi@it4u.org.il", phone:"054-8091343" },
-  { resellerId:"073461", name:"דודי יגל", role:"עסקי", position:"בעלים", email:"dudi@it4u.org.il", phone:"054-4281789" },
-  { resellerId:"081715", name:"יבגני שיפילבסקי", role:"עסקי", position:"", email:"yivgeny@synergy-it.co.il", phone:"058-7330440" },
-  { resellerId:"020035", name:"מוטי זוהר", role:"עסקי", position:"", email:"moti@litos.co.il", phone:"054-3395076" },
-  { resellerId:"020035", name:"יעקב שירי", role:"עסקי", position:"בעלים", email:"yakovs@litos.co.il", phone:"054-3088142" },
-  { resellerId:"081539", name:"ג'קי שושן", role:"טכני", position:"", email:"jackys@pi-sp.com", phone:"054-2360006" },
-  { resellerId:"081539", name:"דניאל אדרי", role:"עסקי", position:"בעלים", email:"danny@sal-it.com", phone:"054-2468220" },
-  { resellerId:"015393", name:"תמיר שן", role:"עסקי", position:"בעלים", email:"tamir@schen.co.il", phone:"052-8746508" },
-  { resellerId:"080206", name:"אלחחר שמעון", role:"עסקי", position:"בעלים", email:"iso2@bezeqint.net", phone:"052-3611893" },
-  { resellerId:"024987", name:"איתן", role:"עסקי", position:"בעלים", email:"eytan@simp.co.il", phone:"050-4090601" },
-  { resellerId:"021513", name:"אסף כנען", role:"עסקי", position:"בעלים", email:"assaf@take-off.co.il", phone:"053-7301505" },
-  { resellerId:"010631", name:"עמיר אלקיים", role:"עסקי", position:"בעלים", email:"amir@el-com.co.il", phone:"054-6339460" },
-  { resellerId:"029441", name:"אולג קובלב", role:"עסקי", position:"רכש", email:"info@elk-group.com", phone:"050-3975054" },
-  { resellerId:"081068", name:"שגיא", role:"עסקי", position:"בעלים", email:"sagi@saycom.co.il", phone:"054-7233770" },
-  { resellerId:"080611", name:"דורון השג", role:"עסקי", position:"בעלים", email:"doron@sysmate.co.il", phone:"054-7848515" },
-  { resellerId:"083044", name:"דויד", role:"עסקי", position:"בעלים", email:"ddcom@012.net.il", phone:"052-2633063" },
-  { resellerId:"028221", name:"ירון מן", role:"עסקי", position:"בעלים", email:"yaron.man@dym.co.il", phone:"054-5444455" },
-  { resellerId:"081776", name:"נתנאור", role:"עסקי", position:"בעלים", email:"natanor@natanor.co.il", phone:"054-5700950" },
-  { resellerId:"074304", name:"אבי אסייג", role:"עסקי", position:"בעלים", email:"avi.a@allit.co.il", phone:"050-4545505" },
-  { resellerId:"074304", name:"אורי כמראני", role:"טכני", position:"בעלים", email:"ori.k@allit.co.il", phone:"050-4464461" },
-  { resellerId:"029891", name:"רחלי", role:"עסקי", position:"רכש", email:"r@rosh.co.il", phone:"054-3333916" },
-  { resellerId:"083142", name:"גל עמר", role:"עסקי", position:"בעלים", email:"gal@galamar.net", phone:"054-3377591" },
-  { resellerId:"010613", name:"משה דגן", role:"עסקי", position:"בעלים", email:"moshe@dgm.co.il", phone:"050-7913250" },
-  { resellerId:"072883", name:"צחי ארז", role:"עסקי", position:"בעלים", email:"tsahy@gibs.co.il", phone:"054-4571371" },
-  { resellerId:"038002", name:"ניר שושני", role:"עסקי", position:"בעלים", email:"nir@acss.co.il", phone:"052-3297794" },
-  { resellerId:"064961", name:"בועז", role:"טכני", position:"טכני", email:"boaz@umbrella-it.co.il", phone:"052-3753538" },
-  { resellerId:"064961", name:"אסף לגזיאל", role:"עסקי", position:"בעלים", email:"asaf@umbrella-it.co.il", phone:"054-4487776" },
-  { resellerId:"042054", name:"יואל", role:"עסקי", position:"בעלים", email:"joel@efratnetworks.net", phone:"052-3983374" },
-  { resellerId:"042054", name:"תומס", role:"טכני", position:"", email:"tomas@efratnetworks.net", phone:"052-6399276" },
-  { resellerId:"081765", name:"יונתן", role:"עסקי", position:"מכירות", email:"yonatan@yhm.co.il", phone:"054-7223292" },
-  { resellerId:"081765", name:"יוסי חגג", role:"עסקי", position:"בעלים", email:"yossi@yhm.co.il", phone:"050-8555575" },
-  { resellerId:"082474", name:"בוריס בקמן", role:"עסקי", position:"בעלים", email:"boris@katom-it.co.il", phone:"052-5678963" },
-  { resellerId:"082474", name:"אלקס לרקין", role:"טכני", position:"טכני", email:"alex@katom-it.co.il", phone:"052-5163900" },
-  { resellerId:"082470", name:"דוד מחיטריאן", role:"טכני", position:"בעלים", email:"david@it-m.co.il", phone:"054-2189016" },
-  { resellerId:"082470", name:"ערן לבון", role:"עסקי", position:"בעלים", email:"eran@it-m.co.il", phone:"054-5747550" },
-  { resellerId:"028827", name:"דודו נחום", role:"עסקי", position:"", email:"dudu@guyshivuk.com", phone:"050-7257144" },
-  { resellerId:"046936", name:"אייל בארי", role:"עסקי", position:"", email:"ayal@egozz.com", phone:"052-9408758" },
-  { resellerId:"046936", name:"דניאל", role:"עסקי", position:"בעלים", email:"daniel@egozz.com", phone:"054-2254252" },
-  { resellerId:"083210", name:"אפי מססה", role:"עסקי", position:"בעלים", email:"efi@inovit.co.il", phone:"050-4771149" },
-  { resellerId:"083210", name:"דרור", role:"עסקי", position:"מכירות", email:"dror@inovit.co.il", phone:"054-8828788" },
-];
-
+// ── CLOUD CORPORATE ───────────────────────────────────────────────────────────
 const CLOUD_CORP = [
-  {sku:"CFQ7TTC0LH18:0001",desc:"Microsoft 365 Business Basic",annualE:72,monthlyE:6.30,mthlyE:7.20},
-  {sku:"CFQ7TTC0LH18:000P",desc:"Microsoft 365 Business Basic (no Teams)",annualE:52.80,monthlyE:4.62,mthlyE:5.28},
-  {sku:"CFQ7TTC0LDPB:0001",desc:"Microsoft 365 Business Standard",annualE:150,monthlyE:13.13,mthlyE:15},
-  {sku:"CFQ7TTC0LDPB:0011",desc:"Microsoft 365 Business Standard (no Teams)",annualE:111.48,monthlyE:9.75,mthlyE:11.15},
-  {sku:"CFQ7TTC0LCHC:0002",desc:"Microsoft 365 Business Premium",annualE:264,monthlyE:23.10,mthlyE:26.40},
-  {sku:"CFQ7TTC0LCHC:000N",desc:"Microsoft 365 Business Premium (no Teams)",annualE:225.48,monthlyE:19.73,mthlyE:22.55},
-  {sku:"CFQ7TTC0LH1G:0001",desc:"Microsoft 365 Apps for business",annualE:99.60,monthlyE:8.72,mthlyE:9.96},
-  {sku:"CFQ7TTC0LGZT:0001",desc:"Microsoft 365 Apps for enterprise",annualE:144,monthlyE:12.60,mthlyE:14.40},
-  {sku:"CFQ7TTC0LFLX:0001",desc:"Microsoft 365 E3",annualE:432,monthlyE:37.80,mthlyE:43.20},
-  {sku:"CFQ7TTC0LFLX:0021",desc:"Microsoft 365 E3 (no Teams)",annualE:329.40,monthlyE:28.82,mthlyE:32.94},
-  {sku:"CFQ7TTC0LFLZ:0002",desc:"Microsoft 365 E5",annualE:684,monthlyE:59.85,mthlyE:68.40},
-  {sku:"CFQ7TTC0MM8R:0002",desc:"Microsoft 365 Copilot",annualE:360,monthlyE:31.50,mthlyE:null},
-  {sku:"CFQ7TTC0MM8R:001P",desc:"Microsoft 365 Copilot Business",annualE:252,monthlyE:22.05,mthlyE:25.20},
-  {sku:"CFQ7TTC0LF8Q:0001",desc:"Office 365 E1",annualE:120,monthlyE:10.50,mthlyE:12},
-  {sku:"CFQ7TTC0LF8R:0001",desc:"Office 365 E3",annualE:276,monthlyE:24.15,mthlyE:27.60},
-  {sku:"CFQ7TTC0LF8S:0002",desc:"Office 365 E5",annualE:456,monthlyE:39.90,mthlyE:45.60},
-  {sku:"CFQ7TTC0LGZW:0001",desc:"Office 365 F3",annualE:48,monthlyE:4.20,mthlyE:4.80},
-  {sku:"CFQ7TTC0MBMD:0002",desc:"Microsoft 365 F1",annualE:27.60,monthlyE:2.42,mthlyE:2.76},
-  {sku:"CFQ7TTC0LH05:0001",desc:"Microsoft 365 F3",annualE:96,monthlyE:8.40,mthlyE:9.60},
-  {sku:"CFQ7TTC0LH16:0001",desc:"Exchange Online Plan 1",annualE:48,monthlyE:4.20,mthlyE:4.80},
-  {sku:"CFQ7TTC0LH1P:0001",desc:"Exchange Online Plan 2",annualE:96,monthlyE:8.40,mthlyE:9.60},
-  {sku:"CFQ7TTC0LH0T:0001",desc:"Microsoft Teams Phone Standard",annualE:120,monthlyE:10.50,mthlyE:12},
-  {sku:"CFQ7TTC0RM8K:0002",desc:"Microsoft Teams Premium",annualE:120,monthlyE:10.50,mthlyE:12},
-  {sku:"CFQ7TTC0LHSF:0001",desc:"Power BI Pro",annualE:168,monthlyE:14.70,mthlyE:16.80},
-  {sku:"CFQ7TTC0HL8W:0001",desc:"Power BI Premium Per User",annualE:288,monthlyE:25.20,mthlyE:28.80},
-  {sku:"CFQ7TTC0LCH4:0009",desc:"Microsoft Intune Plan 1",annualE:96,monthlyE:8.40,mthlyE:9.60},
-  {sku:"CFQ7TTC0LFLS:0002",desc:"Microsoft Entra ID P1",annualE:72,monthlyE:6.30,mthlyE:7.20},
-  {sku:"CFQ7TTC0LFK5:0001",desc:"Microsoft Entra ID P2",annualE:108,monthlyE:9.45,mthlyE:10.80},
-  {sku:"CFQ7TTC0LHT4:0001",desc:"Enterprise Mobility + Security E3",annualE:127.20,monthlyE:11.13,mthlyE:12.72},
-  {sku:"CFQ7TTC0LFJ1:0001",desc:"Enterprise Mobility + Security E5",annualE:196.80,monthlyE:17.22,mthlyE:19.68},
-  {sku:"CFQ7TTC0HX56:0002",desc:"Microsoft Defender for Business",annualE:36,monthlyE:3.15,mthlyE:3.60},
-  {sku:"CFQ7TTC0LGV0:0001",desc:"Microsoft Defender for Endpoint P2",annualE:62.40,monthlyE:5.46,mthlyE:6.24},
-  {sku:"CFQ7TTC0LHQB:0001",desc:"Microsoft Defender Suite",annualE:144,monthlyE:12.60,mthlyE:14.40},
-  {sku:"CFQ7TTC0HD33:0003",desc:"Visio Plan 1",annualE:60,monthlyE:5.25,mthlyE:6},
-  {sku:"CFQ7TTC0HD32:0002",desc:"Visio Plan 2",annualE:180,monthlyE:15.75,mthlyE:18},
-  {sku:"CFQ7TTC0HDB0:0002",desc:"Planner and Project Plan 3",annualE:360,monthlyE:31.50,mthlyE:36},
-  {sku:"CFQ7TTC0HD9Z:0002",desc:"Planner and Project Plan 5",annualE:660,monthlyE:57.75,mthlyE:66},
-  {sku:"CFQ7TTC0LGTX:0004",desc:"Windows 10/11 Enterprise E3",annualE:84,monthlyE:7.35,mthlyE:8.40},
-  {sku:"CFQ7TTC0LFNW:0002",desc:"Windows 10/11 Enterprise E5",annualE:132,monthlyE:11.55,mthlyE:13.20},
-  {sku:"CFQ7TTC0JN4R:0002",desc:"Microsoft Teams Essentials",annualE:48,monthlyE:4.20,mthlyE:4.80},
-  {sku:"CFQ7TTC0QW7C:0001",desc:"Microsoft Teams Rooms Pro",annualE:480,monthlyE:42,mthlyE:48},
-  {sku:"CFQ7TTC0LHSV:0001",desc:"OneDrive for Business Plan 1",annualE:60,monthlyE:5.25,mthlyE:6},
-  {sku:"CFQ7TTC0LH1M:0001",desc:"OneDrive for Business Plan 2",annualE:120,monthlyE:10.50,mthlyE:12},
-  {sku:"CFQ7TTC0LH0N:0001",desc:"SharePoint Plan 1",annualE:60,monthlyE:5.25,mthlyE:6},
-  {sku:"CFQ7TTC0LH14:0001",desc:"SharePoint Plan 2",annualE:120,monthlyE:10.50,mthlyE:12},
+  { sku:"CFQ7TTC0LH0X:0001", desc:"Microsoft 365 Business Basic", annualP:63, annualE:72, monthlyP:5.51, monthlyE:6.30, mthlyP:6.30, mthlyE:7.20 },
+  { sku:"CFQ7TTC0LH0X:0002", desc:"Microsoft 365 Business Basic (no Teams)", annualP:46.20, annualE:52.80, monthlyP:4.04, monthlyE:4.62, mthlyP:4.62, mthlyE:5.28 },
+  { sku:"CFQ7TTC0LH0X:0003", desc:"Microsoft 365 Business Standard", annualP:112, annualE:150, monthlyP:9.80, monthlyE:13.13, mthlyP:11.20, mthlyE:15 },
+  { sku:"CFQ7TTC0LDPB:0001", desc:"Microsoft 365 Business Premium", annualP:196, annualE:264, monthlyP:17.15, monthlyE:23.10, mthlyP:19.60, mthlyE:26.40 },
+  { sku:"CFQ7TTC0LH0X:0004", desc:"Microsoft 365 Apps for Business", annualP:87.50, annualE:100, monthlyP:7.66, monthlyE:8.75, mthlyP:8.75, mthlyE:10 },
+  { sku:"CFQ7TTC0LF8R:0001", desc:"Microsoft 365 E3", annualP:315, annualE:360, monthlyP:27.56, monthlyE:31.50, mthlyP:31.50, mthlyE:36 },
+  { sku:"CFQ7TTC0LFLX:0002", desc:"Microsoft 365 E5", annualP:508.25, annualE:581.40, monthlyP:44.47, monthlyE:50.84, mthlyP:50.84, mthlyE:58.14 },
+  { sku:"CFQ7TTC0LDPB:0002", desc:"Microsoft 365 F1", annualP:21, annualE:24, monthlyP:1.84, monthlyE:2.10, mthlyP:2.10, mthlyE:2.40 },
+  { sku:"CFQ7TTC0LH0X:0007", desc:"Microsoft 365 F3", annualP:70, annualE:80, monthlyP:6.13, monthlyE:7, mthlyP:7, mthlyE:8 },
+  { sku:"CFQ7TTC0LH16:0001", desc:"Office 365 E1", annualP:73.50, annualE:84, monthlyP:6.43, monthlyE:7.35, mthlyP:7.35, mthlyE:8.40 },
+  { sku:"CFQ7TTC0LF8Q:0001", desc:"Office 365 E3", annualP:175, annualE:200, monthlyP:15.31, monthlyE:17.50, mthlyP:17.50, mthlyE:20 },
+  { sku:"CFQ7TTC0LDPB:0003", desc:"Office 365 F3", annualP:42, annualE:48, monthlyP:3.68, monthlyE:4.20, mthlyP:4.20, mthlyE:4.80 },
+  { sku:"CFQ7TTC0LGHS:0001", desc:"Exchange Online (Plan 1)", annualP:31.50, annualE:36, monthlyP:2.76, monthlyE:3.15, mthlyP:3.15, mthlyE:3.60 },
+  { sku:"CFQ7TTC0LHPB:0001", desc:"Exchange Online (Plan 2)", annualP:84, annualE:96, monthlyP:7.35, monthlyE:8.40, mthlyP:8.40, mthlyE:9.60 },
+  { sku:"CFQ7TTC0LH14:0001", desc:"SharePoint (Plan 2)", annualP:105, annualE:120, monthlyP:9.19, monthlyE:10.50, mthlyP:10.50, mthlyE:12 },
+  { sku:"CFQ7TTC0LHR5:0001", desc:"SharePoint advanced management plan 1", annualP:31.50, annualE:36, monthlyP:2.76, monthlyE:3.15, mthlyP:3.15, mthlyE:3.60 },
+  { sku:"CFQ7TTC0LGTX:0004", desc:"Windows 10/11 Enterprise E3", annualP:73.50, annualE:84, monthlyP:6.43, monthlyE:7.35, mthlyP:7.35, mthlyE:8.40 },
+  { sku:"CFQ7TTC0LFNW:0002", desc:"Windows 10/11 Enterprise E5", annualP:115.50, annualE:132, monthlyP:10.11, monthlyE:11.55, mthlyP:11.55, mthlyE:13.20 },
+  { sku:"CFQ7TTC0HD4T:0001", desc:"Microsoft Intune Plan 1", annualP:52.50, annualE:60, monthlyP:4.59, monthlyE:5.25, mthlyP:5.25, mthlyE:6 },
+  { sku:"CFQ7TTC0LFK5:0001", desc:"Microsoft Entra ID P1", annualP:52.50, annualE:60, monthlyP:4.59, monthlyE:5.25, mthlyP:5.25, mthlyE:6 },
+  { sku:"CFQ7TTC0LFK5:0002", desc:"Microsoft Entra ID P2", annualP:84, annualE:96, monthlyP:7.35, monthlyE:8.40, mthlyP:8.40, mthlyE:9.60 },
+  { sku:"CFQ7TTC0HD33:0003", desc:"Visio Plan 1", annualP:52.50, annualE:60, monthlyP:4.59, monthlyE:5.25, mthlyP:5.25, mthlyE:6 },
+  { sku:"CFQ7TTC0HD32:0002", desc:"Visio Plan 2", annualP:157.50, annualE:180, monthlyP:13.78, monthlyE:15.75, mthlyP:15.75, mthlyE:18 },
+  { sku:"CFQ7TTC0HD4F:0001", desc:"Microsoft Project Plan 1", annualP:87.50, annualE:100, monthlyP:7.66, monthlyE:8.75, mthlyP:8.75, mthlyE:10 },
+  { sku:"CFQ7TTC0HD46:0001", desc:"Microsoft Project Plan 3", annualP:262.50, annualE:300, monthlyP:22.97, monthlyE:26.25, mthlyP:26.25, mthlyE:30 },
+  { sku:"CFQ7TTC0HD45:0001", desc:"Microsoft Project Plan 5", annualP:472.50, annualE:540, monthlyP:41.34, monthlyE:47.25, mthlyP:47.25, mthlyE:54 },
+  { sku:"CFQ7TTC0HDJR:0002", desc:"Universal Print", annualP:42, annualE:48, monthlyP:3.68, monthlyE:4.20, mthlyP:4.20, mthlyE:4.80 },
+  { sku:"CFQ7TTC0RM8K:0001", desc:"Microsoft Teams Premium", annualP:157.50, annualE:180, monthlyP:13.78, monthlyE:15.75, mthlyP:15.75, mthlyE:18 },
+  { sku:"CFQ7TTC0LH0T:0001", desc:"Teams Phone Standard", annualP:126, annualE:144, monthlyP:11.03, monthlyE:12.60, mthlyP:12.60, mthlyE:14.40 },
 ];
 
+// ── CLOUD EDUCATION ───────────────────────────────────────────────────────────
 const CLOUD_EDU = [
-  {sku:"CFQ7TTC0LHPL:000W",desc:"Microsoft 365 A3 Faculty",annualE:69.60,monthlyE:6.09,mthlyE:6.96},
-  {sku:"CFQ7TTC0LHPL:000X",desc:"Microsoft 365 A3 Student",annualE:51.60,monthlyE:4.52,mthlyE:5.16},
-  {sku:"CFQ7TTC0LHPJ:0015",desc:"Microsoft 365 A5 Faculty",annualE:129.60,monthlyE:11.34,mthlyE:12.96},
-  {sku:"CFQ7TTC0LHPJ:0013",desc:"Microsoft 365 A5 Student",annualE:96,monthlyE:8.40,mthlyE:9.60},
-  {sku:"CFQ7TTC0LHPK:000W",desc:"Office 365 A1 Faculty",annualE:0,monthlyE:0,mthlyE:0},
-  {sku:"CFQ7TTC0LHPK:000V",desc:"Office 365 A1 Student",annualE:0,monthlyE:0,mthlyE:0},
-  {sku:"CFQ7TTC0LHPP:000H",desc:"Office 365 A3 Faculty",annualE:39.60,monthlyE:3.47,mthlyE:3.96},
-  {sku:"CFQ7TTC0LHPP:000K",desc:"Office 365 A3 Student",annualE:30,monthlyE:2.63,mthlyE:3},
-  {sku:"CFQ7TTC0LHPM:0019",desc:"Office 365 A5 Faculty",annualE:96,monthlyE:8.40,mthlyE:9.60},
-  {sku:"CFQ7TTC0LHPM:001G",desc:"Office 365 A5 Student",annualE:72,monthlyE:6.30,mthlyE:7.20},
-  {sku:"CFQ7TTC0LGZT:001D",desc:"Microsoft 365 Apps Faculty",annualE:27.60,monthlyE:2.42,mthlyE:2.76},
-  {sku:"CFQ7TTC0LGZT:001F",desc:"Microsoft 365 Apps Student",annualE:21,monthlyE:1.84,mthlyE:2.10},
-  {sku:"CFQ7TTC0MM8R:000K",desc:"Copilot for M365 A3/A5 Faculty",annualE:216,monthlyE:18.90,mthlyE:null},
-  {sku:"CFQ7TTC0LHSF:0011",desc:"Power BI Pro Faculty",annualE:27.60,monthlyE:2.42,mthlyE:2.76},
-  {sku:"CFQ7TTC0LHSF:0013",desc:"Power BI Pro Student",annualE:15,monthlyE:1.31,mthlyE:1.50},
-  {sku:"CFQ7TTC0LSNL:0005",desc:"Intune for Education Faculty",annualE:9,monthlyE:0.79,mthlyE:0.90},
-  {sku:"CFQ7TTC0LSNL:0004",desc:"Intune for Education Student",annualE:9,monthlyE:0.79,mthlyE:0.90},
-  {sku:"CFQ7TTC0LFLS:0014",desc:"Microsoft Entra ID P1 Faculty",annualE:7.20,monthlyE:0.63,mthlyE:0.72},
-  {sku:"CFQ7TTC0LFLS:001B",desc:"Microsoft Entra ID P1 Student",annualE:3.60,monthlyE:0.32,mthlyE:0.36},
-  {sku:"CFQ7TTC0LFK5:001J",desc:"Microsoft Entra ID P2 Faculty",annualE:10.80,monthlyE:0.95,mthlyE:1.08},
-  {sku:"CFQ7TTC0LFK5:0019",desc:"Microsoft Entra ID P2 Student",annualE:5.40,monthlyE:0.47,mthlyE:0.54},
-  {sku:"CFQ7TTC0HD33:0014",desc:"Visio Plan 1 Faculty",annualE:12,monthlyE:1.05,mthlyE:1.20},
-  {sku:"CFQ7TTC0HD32:0012",desc:"Visio Plan 2 Faculty",annualE:26.40,monthlyE:2.31,mthlyE:2.64},
-  {sku:"CFQ7TTC0RM8K:000M",desc:"Teams Premium Faculty",annualE:24,monthlyE:2.10,mthlyE:2.40},
-  {sku:"CFQ7TTC0RM8K:000P",desc:"Teams Premium Student",annualE:18,monthlyE:1.58,mthlyE:1.80},
+  { sku:"CFQ7TTC0LH0X:001N", desc:"Microsoft 365 A1 Faculty", annualP:0, annualE:0, monthlyP:0, monthlyE:0, mthlyP:0, mthlyE:0 },
+  { sku:"CFQ7TTC0LH0X:001O", desc:"Microsoft 365 A1 Student", annualP:0, annualE:0, monthlyP:0, monthlyE:0, mthlyP:0, mthlyE:0 },
+  { sku:"CFQ7TTC0LDPB:0017", desc:"Microsoft 365 A3 Faculty", annualP:189, annualE:216, monthlyP:16.54, monthlyE:18.90, mthlyP:18.90, mthlyE:21.60 },
+  { sku:"CFQ7TTC0LDPB:0016", desc:"Microsoft 365 A3 Student", annualP:63, annualE:72, monthlyP:5.51, monthlyE:6.30, mthlyP:6.30, mthlyE:7.20 },
+  { sku:"CFQ7TTC0LFLX:0011", desc:"Microsoft 365 A5 Faculty", annualP:396.55, annualE:453, monthlyP:34.70, monthlyE:39.65, mthlyP:39.65, mthlyE:45.30 },
+  { sku:"CFQ7TTC0LFLX:000U", desc:"Microsoft 365 A5 Student", annualP:132.18, annualE:151, monthlyP:11.57, monthlyE:13.22, mthlyP:13.22, mthlyE:15.10 },
+  { sku:"CFQ7TTC0LF8Q:0004", desc:"Office 365 A3 Faculty", annualP:119, annualE:136, monthlyP:10.41, monthlyE:11.90, mthlyP:11.90, mthlyE:13.60 },
+  { sku:"CFQ7TTC0LF8Q:0003", desc:"Office 365 A3 Student", annualP:39.67, annualE:45.33, monthlyP:3.47, monthlyE:3.97, mthlyP:3.97, mthlyE:4.53 },
+  { sku:"CFQ7TTC0LFK5:001J", desc:"Microsoft Entra ID P2 Faculty", annualP:9.45, annualE:10.80, monthlyP:0.83, monthlyE:0.95, mthlyP:0.95, mthlyE:1.08 },
+  { sku:"CFQ7TTC0LFK5:0019", desc:"Microsoft Entra ID P2 Student", annualP:4.73, annualE:5.40, monthlyP:0.41, monthlyE:0.47, mthlyP:0.47, mthlyE:0.54 },
+  { sku:"CFQ7TTC0HD33:0014", desc:"Visio Plan 1 Faculty", annualP:10.50, annualE:12, monthlyP:0.92, monthlyE:1.05, mthlyP:1.05, mthlyE:1.20 },
+  { sku:"CFQ7TTC0HD32:0012", desc:"Visio Plan 2 Faculty", annualP:23.10, annualE:26.40, monthlyP:2.02, monthlyE:2.31, mthlyP:2.31, mthlyE:2.64 },
+  { sku:"CFQ7TTC0RM8K:000M", desc:"Teams Premium Faculty", annualP:21, annualE:24, monthlyP:1.84, monthlyE:2.10, mthlyP:2.10, mthlyE:2.40 },
+  { sku:"CFQ7TTC0RM8K:000P", desc:"Teams Premium Student", annualP:15.75, annualE:18, monthlyP:1.38, monthlyE:1.58, mthlyP:1.58, mthlyE:1.80 },
 ];
 
+// ── PERPETUAL CORPORATE ───────────────────────────────────────────────────────
 const PERP_CORP = [
-  {sku:"DG7GMGF0PWHC:0003-C",group:"Windows Server",desc:"Windows Server 2025 Standard - 16 Core",partnerPrice:1073.68},
-  {sku:"DG7GMGF0PWHC:0006-C",group:"Windows Server",desc:"Windows Server 2025 Standard - 2 Core",partnerPrice:134.21},
-  {sku:"DG7GMGF0PWHD:0001-C",group:"Windows Server",desc:"Windows Server 2025 Datacenter - 16 Core",partnerPrice:6180.99},
-  {sku:"DG7GMGF0PWHD:0004-C",group:"Windows Server",desc:"Windows Server 2025 Datacenter - 2 Core",partnerPrice:772.40},
-  {sku:"DG7GMGF0PWHT:0002-C",group:"Windows Server",desc:"Windows Server 2025 - 1 User CAL",partnerPrice:45.65},
-  {sku:"DG7GMGF0PWHT:0005-C",group:"Windows Server",desc:"Windows Server 2025 - 1 Device CAL",partnerPrice:35.61},
-  {sku:"DG7GMGF0PWHB:0004-C",group:"Windows Server",desc:"Windows Server 2025 RDS - 1 User CAL",partnerPrice:158.86},
-  {sku:"DG7GMGF0D8H4:0004-C",group:"Windows 10/11",desc:"Windows 11 Pro Upgrade",partnerPrice:170.73},
-  {sku:"DG7GMGF0PP46:0002-C",group:"Windows 10/11",desc:"Windows 11 Enterprise LTSC 2024 Upgrade",partnerPrice:269.33},
-  {sku:"DG7GMGF0SSGZ:0004-C",group:"Win10 ESU",desc:"Windows 10 ESU Year 1 (2025-2026)",partnerPrice:55.69},
-  {sku:"DG7GMGF0SSGZ:0001-C",group:"Win10 ESU",desc:"Windows 10 ESU Year 2 (2026-2027)",partnerPrice:111.39},
-  {sku:"DG7GMGF0SSGZ:0002-C",group:"Win10 ESU",desc:"Windows 10 ESU Year 3 (2027-2028)",partnerPrice:222.77},
-  {sku:"DG7GMGF0VJ96:0002-C",group:"Visual Studio",desc:"Visual Studio Professional 2026",partnerPrice:455.59},
-  {sku:"DG7GMGF0VNJS:0002-C",group:"SQL Server",desc:"SQL Server 2025 Standard - 1 Server",partnerPrice:901.13},
-  {sku:"DG7GMGF0VNH2:0002-C",group:"SQL Server",desc:"SQL Server 2025 Standard Core - 2 Core",partnerPrice:3600.86},
-  {sku:"DG7GMGF0VNGX:0006-C",group:"SQL Server",desc:"SQL Server 2025 Enterprise Core - 2 Core",partnerPrice:13806.34},
-  {sku:"DG7GMGF0VNHV:0002-C",group:"SQL Server",desc:"SQL Server 2025 - 1 User CAL",partnerPrice:209.08},
-  {sku:"DG7GMGF0PN5D:0002-C",group:"Office LTSC",desc:"Office LTSC Standard 2024",partnerPrice:451.93},
-  {sku:"DG7GMGF0PN5F:0002-C",group:"Office LTSC",desc:"Office LTSC Professional Plus 2024",partnerPrice:616.27},
-  {sku:"DG7GMGF0PN5C:0001-C",group:"Office LTSC",desc:"Office LTSC Standard for Mac 2024",partnerPrice:451.93},
-  {sku:"DG7GMGF0PN41:0002-C",group:"Office LTSC",desc:"Word LTSC 2024",partnerPrice:173.47},
-  {sku:"DG7GMGF0PN47:0001-C",group:"Office LTSC",desc:"PowerPoint LTSC 2024",partnerPrice:173.47},
-  {sku:"DG7GMGF0PN5H:0002-C",group:"Office LTSC",desc:"Excel LTSC 2024",partnerPrice:173.47},
-  {sku:"DG7GMGF0PN5V:0001-C",group:"Office LTSC",desc:"Outlook LTSC 2024",partnerPrice:173.47},
-  {sku:"DG7GMGF0PN5J:0002-C",group:"Office LTSC",desc:"Access LTSC 2024",partnerPrice:173.47},
-  {sku:"DG7GMGF0PN43:0002-C",group:"Visio LTSC",desc:"Visio LTSC Professional 2024",partnerPrice:529.54},
-  {sku:"DG7GMGF0PN42:0002-C",group:"Visio LTSC",desc:"Visio LTSC Standard 2024",partnerPrice:283.03},
-  {sku:"DG7GMGF0PN45:0001-C",group:"Project LTSC",desc:"Project Professional 2024",partnerPrice:1031.69},
-  {sku:"DG7GMGF0PN44:0001-C",group:"Project LTSC",desc:"Project Standard 2024",partnerPrice:620.84},
-  {sku:"DG7GMGF0F4MC:0003-C",group:"Exchange Server",desc:"Exchange Server Standard 2019",partnerPrice:712.14},
-  {sku:"DG7GMGF0F4MB:0004-C",group:"Exchange Server",desc:"Exchange Server Standard 2019 User CAL",partnerPrice:88.56},
-  {sku:"DG7GMGF0F4MF:0003-C",group:"Exchange Server",desc:"Exchange Server Enterprise 2019",partnerPrice:4068.31},
-  {sku:"DG7GMGF0F4LT:0002-C",group:"SharePoint Server",desc:"SharePoint Server 2019",partnerPrice:6827.39},
-  {sku:"DG7GMGF0F4LS:0002-C",group:"SharePoint Server",desc:"SharePoint Standard 2019 User CAL",partnerPrice:123.25},
-  {sku:"DG7GMGF0F4LQ:0002-C",group:"Skype Server",desc:"Skype for Business Server 2019",partnerPrice:3662.03},
-  {sku:"DG7GMGF0F4MH:0003-C",group:"Project Server",desc:"Project Server 2019",partnerPrice:5689.80},
-  {sku:"DG7GMGF0G49W:0002-C",group:"BizTalk Server",desc:"BizTalk Server 2020 Standard",partnerPrice:4628.89},
-  {sku:"DG7GMGF0G49X:0001-C",group:"BizTalk Server",desc:"BizTalk Server 2020 Enterprise",partnerPrice:20190.01},
+  { sku:"DG7GMGF0PWHC:0003-C", group:"Windows Server 2025", desc:"Windows Server 2025 Standard - 16 Core", partnerPrice:1073.68 },
+  { sku:"DG7GMGF0PWHC:0006-C", group:"Windows Server 2025", desc:"Windows Server 2025 Standard - 2 Core", partnerPrice:134.21 },
+  { sku:"DG7GMGF0PWHD:0001-C", group:"Windows Server 2025", desc:"Windows Server 2025 Datacenter - 16 Core", partnerPrice:6180.99 },
+  { sku:"DG7GMGF0PWHD:0004-C", group:"Windows Server 2025", desc:"Windows Server 2025 Datacenter - 2 Core", partnerPrice:772.40 },
+  { sku:"DG7GMGF0PWHT:0002-C", group:"Windows Server 2025", desc:"Windows Server 2025 - 1 User CAL", partnerPrice:45.65 },
+  { sku:"DG7GMGF0PWHT:0005-C", group:"Windows Server 2025", desc:"Windows Server 2025 - 1 Device CAL", partnerPrice:35.61 },
+  { sku:"DG7GMGF0PWHB:0004-C", group:"Windows Server 2025", desc:"Windows Server 2025 RDS - 1 User CAL", partnerPrice:158.86 },
+  { sku:"DG7GMGF0PWHB:0001-C", group:"Windows Server 2025", desc:"Windows Server 2025 RDS - 1 Device CAL", partnerPrice:158.86 },
+  { sku:"DG7GMGF0D8H4:0004-C", group:"Windows 10/11", desc:"Windows 11 Pro Upgrade", partnerPrice:170.73 },
+  { sku:"DG7GMGF0PP46:0002-C", group:"Windows 10/11", desc:"Windows 11 Enterprise LTSC 2024 Upgrade", partnerPrice:269.33 },
+  { sku:"DG7GMGF0SSGZ:0004-C", group:"Windows 10 ESU", desc:"Windows 10 ESU Year 1 (2025-2026)", partnerPrice:55.69 },
+  { sku:"DG7GMGF0SSGZ:0001-C", group:"Windows 10 ESU", desc:"Windows 10 ESU Year 2 (2026-2027)", partnerPrice:111.39 },
+  { sku:"DG7GMGF0SSGZ:0002-C", group:"Windows 10 ESU", desc:"Windows 10 ESU Year 3 (2027-2028)", partnerPrice:222.77 },
+  { sku:"DG7GMGF0F4Q5:0003-C", group:"SQL Server 2022", desc:"SQL Server 2022 Standard - 2 Core", partnerPrice:1871.65 },
+  { sku:"DG7GMGF0F4Q5:0001-C", group:"SQL Server 2022", desc:"SQL Server 2022 Enterprise - 2 Core", partnerPrice:7336.57 },
+  { sku:"DG7GMGF0F4Q5:0004-C", group:"SQL Server 2022", desc:"SQL Server 2022 Standard - 1 Server", partnerPrice:935.82 },
+  { sku:"DG7GMGF0F4Q5:0002-C", group:"SQL Server 2022", desc:"SQL Server 2022 Developer (free)", partnerPrice:0 },
+  { sku:"DG7GMGF0M7XV:0002-C", group:"SQL Server 2022", desc:"SQL Server 2022 - 1 User CAL", partnerPrice:231.35 },
+  { sku:"DG7GMGF0M7XV:0001-C", group:"SQL Server 2022", desc:"SQL Server 2022 - 1 Device CAL", partnerPrice:231.35 },
+  { sku:"DG7GMGF0HL4H:0001-C", group:"Office 2024", desc:"Office LTSC Standard 2024", partnerPrice:439.01 },
+  { sku:"DG7GMGF0HL4H:0002-C", group:"Office 2024", desc:"Office LTSC Professional Plus 2024", partnerPrice:519.79 },
+  { sku:"DG7GMGF0D7RR:0001-C", group:"Office 2024", desc:"Office LTSC Standard 2024 for Mac", partnerPrice:439.01 },
+  { sku:"DG7GMGF0HL56:0001-C", group:"Office 2024", desc:"Visio LTSC Standard 2024", partnerPrice:561.83 },
+  { sku:"DG7GMGF0HL4K:0001-C", group:"Office 2024", desc:"Visio LTSC Professional 2024", partnerPrice:855.39 },
+  { sku:"DG7GMGF0HL59:0001-C", group:"Office 2024", desc:"Project Standard 2024", partnerPrice:769.99 },
+  { sku:"DG7GMGF0HL58:0001-C", group:"Office 2024", desc:"Project Professional 2024", partnerPrice:1159.99 },
+  { sku:"DG7GMGF0HGCP:0001-C", group:"Exchange Server 2019", desc:"Exchange Server 2019 Standard", partnerPrice:838.98 },
+  { sku:"DG7GMGF0HGCP:0002-C", group:"Exchange Server 2019", desc:"Exchange Server 2019 Enterprise", partnerPrice:4699.17 },
 ];
 
+// ── PERPETUAL EDUCATION ────────────────────────────────────────────────────────
 const PERP_EDU = [
-  {sku:"DG7GMGF0PWHC:0003-E",group:"Windows Server",desc:"Windows Server 2025 Standard - 16 Core",partnerPrice:268.42},
-  {sku:"DG7GMGF0PWHC:0006-E",group:"Windows Server",desc:"Windows Server 2025 Standard - 2 Core",partnerPrice:32.87},
-  {sku:"DG7GMGF0PWHD:0001-E",group:"Windows Server",desc:"Windows Server 2025 Datacenter - 16 Core",partnerPrice:1544.79},
-  {sku:"DG7GMGF0PWHD:0004-E",group:"Windows Server",desc:"Windows Server 2025 Datacenter - 2 Core",partnerPrice:192.64},
-  {sku:"DG7GMGF0PWHT:0002-E",group:"Windows Server",desc:"Windows Server 2025 - 1 User CAL",partnerPrice:10.96},
-  {sku:"DG7GMGF0D8H4:0004-E",group:"Windows 10/11",desc:"Windows 11 Pro Upgrade",partnerPrice:59.34},
-  {sku:"DG7GMGF0SSGZ:0003-E",group:"Win10 ESU",desc:"Windows 10 ESU Year 1 (2025-2026)",partnerPrice:0.91},
-  {sku:"DG7GMGF0SSGZ:0005-E",group:"Win10 ESU",desc:"Windows 10 ESU Year 2 (2026-2027)",partnerPrice:1.83},
-  {sku:"DG7GMGF0SSGZ:0006-E",group:"Win10 ESU",desc:"Windows 10 ESU Year 3 (2027-2028)",partnerPrice:3.65},
-  {sku:"DG7GMGF0VJ96:0002-E",group:"Visual Studio",desc:"Visual Studio Professional 2026",partnerPrice:67.56},
-  {sku:"DG7GMGF0VNJS:0002-E",group:"SQL Server",desc:"SQL Server 2025 Standard - 1 Server",partnerPrice:224.60},
-  {sku:"DG7GMGF0VNH2:0002-E",group:"SQL Server",desc:"SQL Server 2025 Standard Core - 2 Core",partnerPrice:900.21},
-  {sku:"DG7GMGF0VNGX:0006-E",group:"SQL Server",desc:"SQL Server 2025 Enterprise Core - 2 Core",partnerPrice:3451.13},
-  {sku:"DG7GMGF0PN5D:0002-E",group:"Office LTSC",desc:"Office LTSC Standard 2024",partnerPrice:61.17},
-  {sku:"DG7GMGF0PN5F:0002-E",group:"Office LTSC",desc:"Office LTSC Professional Plus 2024",partnerPrice:84},
-  {sku:"DG7GMGF0PN41:0002-E",group:"Office LTSC",desc:"Word LTSC 2024",partnerPrice:23.47},
-  {sku:"DG7GMGF0PN5H:0002-E",group:"Office LTSC",desc:"Excel LTSC 2024",partnerPrice:23.47},
-  {sku:"DG7GMGF0PN5V:0001-E",group:"Office LTSC",desc:"Outlook LTSC 2024",partnerPrice:23.47},
-  {sku:"DG7GMGF0PN43:0002-E",group:"Visio LTSC",desc:"Visio LTSC Professional 2024",partnerPrice:79.43},
-  {sku:"DG7GMGF0PN45:0001-E",group:"Project LTSC",desc:"Project Professional 2024",partnerPrice:154.30},
-  {sku:"DG7GMGF0F4MC:0003-E",group:"Exchange Server",desc:"Exchange Server Standard 2019",partnerPrice:178.03},
-  {sku:"DG7GMGF0F4LT:0002-E",group:"SharePoint Server",desc:"SharePoint Server 2019",partnerPrice:1706.39},
+  { sku:"DG7GMGF0HL4H:0003-C", group:"Office 2024 Education", desc:"Office LTSC Standard 2024 Education Faculty", partnerPrice:195.61 },
+  { sku:"DG7GMGF0HL4H:0004-C", group:"Office 2024 Education", desc:"Office LTSC Standard 2024 Education Student", partnerPrice:65.20 },
+  { sku:"DG7GMGF0PWHC:0007-C", group:"Windows Server 2025 Edu", desc:"Windows Server 2025 Standard - 16 Core Edu", partnerPrice:859.44 },
+  { sku:"DG7GMGF0PWHD:0005-C", group:"Windows Server 2025 Edu", desc:"Windows Server 2025 Datacenter - 16 Core Edu", partnerPrice:4944.79 },
 ];
 
-const SK={res:"ms_res_v5",cons:"ms_cons_v1",auth:"ms_auth_v1",prices:"ms_prices_v1"};
-const ld=(k,d)=>{try{const s=localStorage.getItem(k);return s?JSON.parse(s):d;}catch{return d;}};
-const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
-const fmt=n=>n==null?"—":`$${Number(n).toFixed(2)}`;
-const dp=(p,pct)=>p*(1-pct/100);
-const genSecret=()=>{const c="ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";let s="";for(let i=0;i<16;i++)s+=c[Math.floor(Math.random()*32)];return s;};
+// ── HELPER ─────────────────────────────────────────────────────────────────────
+const fmt = (n) => n == null || n === "" ? "" : "$" + Number(n).toFixed(2);
+const dp = (price, discPct) => price * (1 - discPct / 100);
 
-function SetupScreen({onDone}){
-  const [pw,setPw]=useState("");const [pw2,setPw2]=useState("");const [err,setErr]=useState("");
-  function finish(){
-    if(pw.length<4)return setErr("סיסמה חייבת להיות לפחות 4 תווים");
-    if(pw!==pw2)return setErr("הסיסמאות לא תואמות");
-    const cfg={password:pw,totpSecret:genSecret(),setup:true};sv(SK.auth,cfg);onDone(cfg);
-  }
-  return(<div style={{minHeight:"100vh",background:"linear-gradient(135deg,#059669,#047857)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-    <div style={{background:"#fff",borderRadius:16,padding:28,width:300,boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
-      <div style={{textAlign:"center",marginBottom:20}}><div style={{fontSize:32}}>🔐</div><div style={{fontWeight:"bold",fontSize:16,color:"#1e40af"}}>הגדרת סיסמה</div></div>
-      <label style={{fontSize:12,color:"#666"}}>סיסמה</label>
-      <input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="לפחות 4 תווים" style={{width:"100%",padding:10,border:"1px solid #c7d2fe",borderRadius:8,marginBottom:8,boxSizing:"border-box",fontSize:14}} autoFocus/>
-      <label style={{fontSize:12,color:"#666"}}>אשר סיסמה</label>
-      <input type="password" value={pw2} onChange={e=>setPw2(e.target.value)} onKeyDown={e=>e.key==="Enter"&&finish()} style={{width:"100%",padding:10,border:"1px solid #c7d2fe",borderRadius:8,marginBottom:12,boxSizing:"border-box",fontSize:14}}/>
-      {err&&<div style={{color:"#dc2626",fontSize:12,marginBottom:8}}>{err}</div>}
-      <button type="button" onClick={finish} style={{width:"100%",padding:12,background:"#059669",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontWeight:"bold",fontSize:15}}>כניסה ✓</button>
-    </div>
-  </div>);
-}
-
-function LoginScreen({onLogin,authCfg}){
-  const [pw,setPw]=useState("");const [err,setErr]=useState("");
-  function handle(){if(pw===authCfg.password){onLogin();setErr("");}else setErr("סיסמה שגויה");}
-  return(<div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0078d4,#004578)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-    <div style={{background:"#fff",borderRadius:16,padding:32,width:300,boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
-      <div style={{textAlign:"center",marginBottom:24}}><div style={{fontSize:32}}>🏢</div><div style={{fontWeight:"bold",fontSize:18,color:"#1e40af"}}>מנהל משווקים</div><div style={{fontSize:12,color:"#888"}}>Microsoft Partners</div></div>
-      <label style={{fontSize:12,color:"#666"}}>סיסמה</label>
-      <input type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handle()} placeholder="הכנס סיסמה" style={{width:"100%",padding:10,border:"1px solid #c7d2fe",borderRadius:8,marginBottom:8,boxSizing:"border-box",fontSize:14}} autoFocus/>
-      {err&&<div style={{color:"#dc2626",fontSize:12,marginBottom:8}}>{err}</div>}
-      <button type="button" onClick={handle} style={{width:"100%",padding:12,background:"#0078d4",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:14,fontWeight:"bold"}}>כניסה →</button>
-    </div>
-  </div>);
-}
-
-function SettingsModal({authCfg,onSave,onClose}){
-  const [pw,setPw]=useState("");const [pw2,setPw2]=useState("");const [err,setErr]=useState("");const [ok,setOk]=useState("");
-  function save(){if(pw.length<4)return setErr("לפחות 4 תווים");if(pw!==pw2)return setErr("לא תואמות");const n={...authCfg,password:pw};sv(SK.auth,n);onSave(n);setOk("✅ עודכן!");setErr("");setPw("");setPw2("");}
-  return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
-    <div style={{background:"#fff",borderRadius:12,padding:24,width:280}}>
-      <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}><div style={{fontWeight:"bold"}}>⚙️ שינוי סיסמה</div><button onClick={onClose} style={{border:"none",background:"none",fontSize:18,cursor:"pointer"}}>✕</button></div>
-      <label style={{fontSize:12,color:"#666"}}>סיסמה חדשה</label>
-      <input type="password" value={pw} onChange={e=>setPw(e.target.value)} style={{width:"100%",padding:8,border:"1px solid #c7d2fe",borderRadius:6,marginBottom:8,boxSizing:"border-box"}}/>
-      <label style={{fontSize:12,color:"#666"}}>אשר</label>
-      <input type="password" value={pw2} onChange={e=>setPw2(e.target.value)} style={{width:"100%",padding:8,border:"1px solid #c7d2fe",borderRadius:6,marginBottom:12,boxSizing:"border-box"}}/>
-      {err&&<div style={{color:"#dc2626",fontSize:12,marginBottom:8}}>{err}</div>}
-      {ok&&<div style={{color:"#059669",fontSize:12,marginBottom:8}}>{ok}</div>}
-      <button type="button" onClick={save} style={{width:"100%",padding:10,background:"#0078d4",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontWeight:"bold"}}>שמור</button>
-    </div>
-  </div>);
-}
-
-function App(){
-  const [authCfg,setAuthCfg]=useState(()=>ld(SK.auth,null));
-  const [loggedIn,setLoggedIn]=useState(false);
-  const [showSettings,setShowSettings]=useState(false);
-  const [resellers,setResellers]=useState(()=>{
-    const saved=ld(SK.res,null);
-    if(saved){return saved.map(r=>({...r,contacts:(r.contacts&&r.contacts.length>0)?r.contacts:CONTACTS_RAW.filter(c=>c.resellerId===r.id)}));}
-    return INIT_RESELLERS.map(r=>({...r,contacts:CONTACTS_RAW.filter(c=>c.resellerId===r.id)}));
+// ── APP ────────────────────────────────────────────────────────────────────────
+function App() {
+  const [tab, setTab] = useState("resellers");
+  const [resellers, setResellers] = useState(() => {
+    try { const s = localStorage.getItem("ms_resellers"); return s ? JSON.parse(s) : DEFAULT_RESELLERS; } catch { return DEFAULT_RESELLERS; }
   });
-  const [customPrices,setCustomPrices]=useState(()=>ld(SK.prices,{corp:null,edu:null,perpCorp:null,perpEdu:null}));
-  const [consumption,setConsumption]=useState(()=>ld(SK.cons,{}));
-  const [tab,setTab]=useState("resellers");
-  const [search,setSearch]=useState("");
-  const [sel,setSel]=useState(null);
-  const [editMode,setEditMode]=useState(false);
-  const [editData,setEditData]=useState(null);
-  const [showAdd,setShowAdd]=useState(false);
-  const [newRes,setNewRes]=useState({name:"",nameHe:"",id:"",discount:12.5,address:"",phone:"",email:""});
-  const [confirmDelete,setConfirmDelete]=useState(null);
-  const [priceTab,setPriceTab]=useState("corp");
-  const [priceSearch,setPriceSearch]=useState("");
-  const [priceRes,setPriceRes]=useState("");
-  const [priceModel,setPriceModel]=useState("annual");
-  const [calc365Items,setCalc365Items]=useState([{type:"corp",sku:"",qty:1}]);
-  const [calcRes,setCalcRes]=useState("");
-  const [calcModel,setCalcModel]=useState("annual");
-  const [calcPerpItems,setCalcPerpItems]=useState([{type:"perpCorp",sku:"",qty:1}]);
-  const [perpExtra,setPerpExtra]=useState(0);
-  const [consMonth,setConsMonth]=useState(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;});
-  const [prevMonth,setPrevMonth]=useState(()=>{const d=new Date();d.setMonth(d.getMonth()-1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;});
-  const fileRef=useRef();
+  const [consumption, setConsumption] = useState(() => {
+    try { const s = localStorage.getItem("ms_consumption"); return s ? JSON.parse(s) : {}; } catch { return {}; }
+  });
 
-  useEffect(()=>sv(SK.res,resellers),[resellers]);
-  useEffect(()=>sv(SK.cons,consumption),[consumption]);
-  useEffect(()=>sv(SK.prices,customPrices),[customPrices]);
+  useEffect(() => { try { localStorage.setItem("ms_resellers", JSON.stringify(resellers)); } catch {} }, [resellers]);
+  useEffect(() => { try { localStorage.setItem("ms_consumption", JSON.stringify(consumption)); } catch {} }, [consumption]);
 
-  // כפתור חזרה של הטלפון
-  useEffect(()=>{
-    const h=(e)=>{if(editMode){setEditMode(false);setEditData(null);}else if(showAdd){setShowAdd(false);}else if(sel){setSel(null);}};
-    window.addEventListener("popstate",h);return()=>window.removeEventListener("popstate",h);
-  },[editMode,showAdd,sel]);
-  useEffect(()=>{if(sel||editMode||showAdd)window.history.pushState({d:true},"");},[sel,editMode,showAdd]);
+  // resellers tab state
+  const [search, setSearch] = useState("");
+  const [sel, setSel] = useState(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editData, setEditData] = useState(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newRes, setNewRes] = useState({ name:"", nameHe:"", id:"", discount:12.5, phone:"", email:"", address:"" });
 
-  // אבטחה
-  if(!authCfg||!authCfg.setup)return <SetupScreen onDone={cfg=>{setAuthCfg(cfg);setLoggedIn(true);}}/>;
-  if(!loggedIn)return <LoginScreen onLogin={()=>setLoggedIn(true)} authCfg={authCfg}/>;
+  // price tab state
+  const [priceType, setPriceType] = useState("corp"); // corp | edu
+  const [priceModel, setPriceModel] = useState("annual"); // annual | monthly | mthly
+  const [priceSearch, setPriceSearch] = useState("");
+  const [selResForPrice, setSelResForPrice] = useState("");
 
-  const getList=t=>customPrices[t]||(t==="corp"?CLOUD_CORP:t==="edu"?CLOUD_EDU:t==="perpCorp"?PERP_CORP:PERP_EDU);
-  const isPerp=priceTab==="perpCorp"||priceTab==="perpEdu";
-  const priceDisc=(resellers.find(r=>r.id===priceRes)||{discount:12.5}).discount;
-  const calcDisc=(resellers.find(r=>r.id===calcRes)||{discount:12.5}).discount;
-  const curList=getList(priceTab);
+  // perpetual tab state
+  const [perpType, setPerpType] = useState("corp");
+  const [perpSearch, setPerpSearch] = useState("");
+  const [selResForPerp, setSelResForPerp] = useState("");
+  const [perpExtraDisc, setPerpExtraDisc] = useState(0);
 
-  const filteredPrices=useMemo(()=>{const q=priceSearch.toLowerCase();return curList.filter(p=>p.desc.toLowerCase().includes(q)||p.sku.toLowerCase().includes(q)||(p.group||"").toLowerCase().includes(q));},[curList,priceSearch,priceTab]);
-  const filtered=useMemo(()=>{const q=search.toLowerCase();return resellers.filter(r=>r.name.toLowerCase().includes(q)||(r.nameHe||"").includes(q)||r.id.includes(q)||(r.address||"").includes(q));},[resellers,search]);
+  // calculator tab state
+  const [calcItems, setCalcItems] = useState([{ type:"cloud", sku:"", qty:1 }]);
+  const [calcRes, setCalcRes] = useState("");
+  const [calcModel, setCalcModel] = useState("annual");
+  const [perpCalcItems, setPerpCalcItems] = useState([{ sku:"", qty:1 }]);
+  const [perpCalcExtraDisc, setPerpCalcExtraDisc] = useState(0);
+  const [perpCalcRes, setPerpCalcRes] = useState("");
 
-  const total365=calc365Items.reduce((s,it)=>{const p=getList(it.type).find(x=>x.sku===it.sku);if(!p)return s;const b=calcModel==="annual"?p.annualE:calcModel==="monthly"?p.monthlyE:p.mthlyE;if(!b)return s;return s+dp(b,calcDisc)*Number(it.qty||1);},0);
-  const totalPerp=calcPerpItems.reduce((s,it)=>{const p=getList(it.type).find(x=>x.sku===it.sku);if(!p)return s;return s+dp(p.partnerPrice,perpExtra)*Number(it.qty||1);},0);
+  // consumption tab state
+  const [consMonth, setConsMonth] = useState(() => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; });
+  const [prevMonth, setPrevMonth] = useState(() => { const d=new Date(); d.setMonth(d.getMonth()-1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; });
+  const [consSearch, setConsSearch] = useState("");
 
-  function handleCSV(e){
-    const file=e.target.files[0];if(!file)return;
-    const reader=new FileReader();
-    reader.onload=(ev)=>{
-      const lines=ev.target.result.split("\n").filter(l=>l.trim());
-      const headers=lines[0].split(",").map(h=>h.trim().replace(/"/g,"").toLowerCase());
-      const di=headers.findIndex(h=>h.includes("description"));
-      const ei=headers.findIndex(h=>h.includes("end user")&&h.includes("annual")&&!h.includes("monthly"));
-      const mi=headers.findIndex(h=>h.includes("end user")&&h.includes("monthly")&&!h.includes("commit"));
-      const si=headers.findIndex(h=>h.includes("sku"));
-      if(di===-1){alert("לא זוהה עמודת Description");return;}
-      const rows=lines.slice(1).map(l=>{const c=l.split(",").map(x=>x.trim().replace(/[$",]/g,""));return{sku:si>=0?c[si]:"",desc:c[di]||"",annualE:ei>=0&&c[ei]?parseFloat(c[ei])||null:null,monthlyE:mi>=0&&c[mi]?parseFloat(c[mi])||null:null,mthlyE:null};}).filter(r=>r.desc);
-      const isP=rows.some(r=>r.desc.toLowerCase().includes("windows server")||r.desc.toLowerCase().includes("office ltsc"));
-      const isE=rows.some(r=>r.desc.toLowerCase().includes("faculty")||r.desc.toLowerCase().includes("student"));
-      const key=isP?(isE?"perpEdu":"perpCorp"):(isE?"edu":"corp");
-      if(isP)setCustomPrices(p=>({...p,[key]:rows.map(r=>({sku:r.sku,group:"Imported",desc:r.desc,partnerPrice:r.annualE||0}))}));
-      else setCustomPrices(p=>({...p,[key]:rows}));
-      alert(`✅ ${rows.length} מוצרים (${key})`);
-    };
-    reader.readAsText(file);e.target.value="";
-  }
+  const filtered = useMemo(() => resellers.filter(r =>
+    r.name.toLowerCase().includes(search.toLowerCase()) ||
+    (r.nameHe||"").includes(search) ||
+    r.id.includes(search) ||
+    (r.address||"").includes(search)
+  ), [resellers, search]);
 
-  const startEdit=r=>{setEditData(JSON.parse(JSON.stringify(r)));setEditMode(true);};
-  const saveEdit=()=>{setResellers(p=>p.map(r=>r.id===editData.id?editData:r));setSel(editData);setEditMode(false);setEditData(null);};
-  const addReseller=()=>{if(!newRes.name||!newRes.id)return alert("שם ומספר חובה");if(resellers.find(r=>r.id===newRes.id))return alert("מספר כבר קיים");setResellers(p=>[...p,{...newRes,contacts:[]}]);setNewRes({name:"",nameHe:"",id:"",discount:12.5,address:"",phone:"",email:""});setShowAdd(false);};
-  const confirmDeleteDo=()=>{setResellers(p=>p.filter(r=>r.id!==confirmDelete));setSel(null);setConfirmDelete(null);};
-  const getC=(id,m)=>consumption[`${id}_${m}`]||"";
-  const setC=(id,m,v)=>setConsumption(p=>({...p,[`${id}_${m}`]:v}));
+  const cloudList = priceType === "corp" ? CLOUD_CORP : CLOUD_EDU;
+  const filteredCloud = useMemo(() => cloudList.filter(p =>
+    p.desc.toLowerCase().includes(priceSearch.toLowerCase()) || p.sku.includes(priceSearch)
+  ), [cloudList, priceSearch]);
 
-  const nav=[["resellers","👥 משווקים"],["prices","💰 מחירונים"],["calc365","🧮 365"],["calcPerp","💿 Perpetual"],["consumption","📊 צריכה"]];
-  const inp={style:{width:"100%",padding:8,border:"1px solid #c7d2fe",borderRadius:6,marginBottom:8,boxSizing:"border-box"}};
+  const perpList = perpType === "corp" ? PERP_CORP : PERP_EDU;
+  const filteredPerp = useMemo(() => perpList.filter(p =>
+    p.desc.toLowerCase().includes(perpSearch.toLowerCase()) || (p.group||"").toLowerCase().includes(perpSearch.toLowerCase()) || p.sku.includes(perpSearch)
+  ), [perpList, perpSearch]);
 
-  return(<div dir="rtl" style={{fontFamily:"Arial,sans-serif",background:"#f0f4ff",minHeight:"100vh",fontSize:14}}>
-    {showSettings&&<SettingsModal authCfg={authCfg} onSave={setAuthCfg} onClose={()=>setShowSettings(false)}/>}
-    {confirmDelete&&(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
-      <div style={{background:"#fff",borderRadius:12,padding:24,width:280,textAlign:"center"}}>
-        <div style={{fontSize:32,marginBottom:8}}>🗑</div><div style={{fontWeight:"bold",marginBottom:8}}>למחוק משווק זה?</div>
-        <div style={{fontSize:12,color:"#888",marginBottom:16}}>פעולה זו לא ניתנת לביטול</div>
-        <div style={{display:"flex",gap:8}}>
-          <button onClick={()=>setConfirmDelete(null)} style={{flex:1,padding:10,background:"#f1f5f9",border:"none",borderRadius:8,cursor:"pointer",fontWeight:"bold"}}>ביטול</button>
-          <button onClick={confirmDeleteDo} style={{flex:1,padding:10,background:"#dc2626",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontWeight:"bold"}}>מחק</button>
+  const getDiscForRes = (resId, list) => {
+    const r = resellers.find(x => x.id === resId);
+    return r ? r.discount : 12.5;
+  };
+
+  const getCloudPrice = (product, model, discPct) => {
+    if (model === "annual") return { partner: dp(product.annualE, discPct), endUser: product.annualE };
+    if (model === "monthly") return { partner: dp(product.monthlyE, discPct), endUser: product.monthlyE };
+    return { partner: dp(product.mthlyE, discPct), endUser: product.mthlyE };
+  };
+
+  const getPerpPrice = (product, extraDisc) => {
+    const myPrice = dp(product.partnerPrice, 2); // 2% off partner price
+    const withExtra = extraDisc > 0 ? dp(myPrice, extraDisc) : myPrice;
+    return { myPrice: withExtra, endUser: product.partnerPrice };
+  };
+
+  const getConsVal = (id, month) => consumption[`${id}_${month}`] || "";
+  const setConsVal = (id, month, val) => setConsumption(p => ({ ...p, [`${id}_${month}`]: val }));
+
+  const consFiltered = useMemo(() => resellers.filter(r =>
+    r.name.toLowerCase().includes(consSearch.toLowerCase()) || (r.nameHe||"").includes(consSearch)
+  ), [resellers, consSearch]);
+
+  // Cloud calculator total
+  const cloudCalcTotal = useMemo(() => {
+    const disc = calcRes ? getDiscForRes(calcRes) : 12.5;
+    return calcItems.reduce((sum, item) => {
+      if (!item.sku) return sum;
+      const allCloud = [...CLOUD_CORP, ...CLOUD_EDU];
+      const prod = allCloud.find(p => p.sku === item.sku);
+      if (!prod) return sum;
+      const { partner } = getCloudPrice(prod, calcModel, disc);
+      return sum + partner * Number(item.qty || 1);
+    }, 0);
+  }, [calcItems, calcRes, calcModel, resellers]);
+
+  // Perp calculator total
+  const perpCalcTotal = useMemo(() => {
+    const allPerp = [...PERP_CORP, ...PERP_EDU];
+    return perpCalcItems.reduce((sum, item) => {
+      if (!item.sku) return sum;
+      const prod = allPerp.find(p => p.sku === item.sku);
+      if (!prod) return sum;
+      const { myPrice } = getPerpPrice(prod, perpCalcExtraDisc);
+      return sum + myPrice * Number(item.qty || 1);
+    }, 0);
+  }, [perpCalcItems, perpCalcExtraDisc]);
+
+  const tabs = [
+    { id:"resellers", label:"👥 משווקים" },
+    { id:"cloud", label:"☁️ מחירון Cloud" },
+    { id:"perp", label:"📦 מחירון Perpetual" },
+    { id:"calc", label:"🧮 מחשבון" },
+    { id:"consumption", label:"📊 צריכה" },
+  ];
+
+  const S = { // styles
+    card: { background:"#fff", borderRadius:12, border:"1px solid #e0e7ff", padding:"12px 14px", marginBottom:8 },
+    btn: (color="#0078d4") => ({ background:color, color:"#fff", border:"none", borderRadius:6, padding:"7px 14px", cursor:"pointer", fontSize:13, fontWeight:"bold" }),
+    btnSm: (color="#0078d4") => ({ background:color, color:"#fff", border:"none", borderRadius:5, padding:"4px 10px", cursor:"pointer", fontSize:12 }),
+    input: { width:"100%", padding:"8px 10px", border:"1px solid #c7d2fe", borderRadius:7, fontSize:13, boxSizing:"border-box" },
+    label: { fontSize:12, color:"#555", marginBottom:3, display:"block" },
+    badge: (c="#dbeafe") => ({ background:c, borderRadius:12, padding:"2px 8px", fontSize:11, fontWeight:"bold" }),
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#f0f4ff" }}>
+      {/* Header */}
+      <div style={{ background:"#0078d4", color:"#fff", padding:"10px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <span style={{ fontSize:20 }}>🪟</span>
+        <div>
+          <div style={{ fontWeight:"bold", fontSize:15 }}>מנהל משווקים Microsoft</div>
+          <div style={{ fontSize:11, opacity:0.8 }}>CMS Compucenter</div>
         </div>
       </div>
-    </div>)}
 
-    <div style={{background:"linear-gradient(135deg,#0078d4,#106ebe)",padding:"10px 16px",color:"#fff",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-      <div><div style={{fontSize:17,fontWeight:"bold"}}>🏢 מנהל משווקים Microsoft</div><div style={{fontSize:11,opacity:0.8}}>Slava Obedin · CMS Compucenter</div></div>
-      <div style={{display:"flex",gap:8}}>
-        <button onClick={()=>setShowSettings(true)} style={{background:"rgba(255,255,255,0.2)",border:"none",color:"#fff",padding:"6px 10px",borderRadius:6,cursor:"pointer",fontSize:12}}>⚙️</button>
-        <button onClick={()=>setLoggedIn(false)} style={{background:"rgba(255,255,255,0.2)",border:"none",color:"#fff",padding:"6px 10px",borderRadius:6,cursor:"pointer",fontSize:12}}>🔒</button>
+      {/* Tabs */}
+      <div style={{ background:"#fff", borderBottom:"1px solid #e0e7ff", overflowX:"auto", display:"flex" }}>
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            border:"none", background:"none", padding:"10px 14px", cursor:"pointer",
+            fontWeight: tab===t.id ? "bold" : "normal",
+            borderBottom: tab===t.id ? "3px solid #0078d4" : "3px solid transparent",
+            color: tab===t.id ? "#0078d4" : "#444",
+            whiteSpace:"nowrap", fontSize:13
+          }}>{t.label}</button>
+        ))}
+      </div>
+
+      <div style={{ padding:12, maxWidth:900, margin:"0 auto" }}>
+
+        {/* ─── RESELLERS TAB ─── */}
+        {tab==="resellers" && !sel && (
+          <div>
+            <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 חפש שם, מספר, כתובת..." style={{ ...S.input, flex:1 }} />
+              <button onClick={() => setShowAdd(true)} style={S.btn()}>+ הוסף</button>
+            </div>
+
+            {showAdd && (
+              <div style={{ ...S.card, background:"#eff6ff", marginBottom:12 }}>
+                <div style={{ fontWeight:"bold", marginBottom:8, color:"#1e40af" }}>➕ הוסף משווק חדש</div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                  {[["שם באנגלית","name"],["שם בעברית","nameHe"],["מספר משווק","id"],["אחוז הנחה","discount"],["טלפון","phone"],["אימייל","email"]].map(([lbl,key]) => (
+                    <div key={key}>
+                      <span style={S.label}>{lbl}</span>
+                      <input style={S.input} value={newRes[key]} onChange={e=>setNewRes(p=>({...p,[key]:e.target.value}))} type={key==="discount"?"number":"text"} />
+                    </div>
+                  ))}
+                  <div style={{ gridColumn:"1/-1" }}>
+                    <span style={S.label}>כתובת</span>
+                    <input style={S.input} value={newRes.address} onChange={e=>setNewRes(p=>({...p,address:e.target.value}))} />
+                  </div>
+                </div>
+                <div style={{ display:"flex", gap:8, marginTop:10 }}>
+                  <button style={S.btn()} onClick={() => {
+                    if (!newRes.name || !newRes.id) return alert("שם ומספר משווק חובה");
+                    setResellers(p => [...p, { ...newRes, discount: parseFloat(newRes.discount)||12.5 }]);
+                    setNewRes({ name:"", nameHe:"", id:"", discount:12.5, phone:"", email:"", address:"" });
+                    setShowAdd(false);
+                  }}>שמור</button>
+                  <button style={S.btn("#6b7280")} onClick={() => setShowAdd(false)}>ביטול</button>
+                </div>
+              </div>
+            )}
+
+            <div style={{ fontSize:12, color:"#888", marginBottom:8 }}>{filtered.length} משווקים</div>
+            {filtered.map(r => (
+              <div key={r.id} onClick={() => { setSel(r); setEditMode(false); }}
+                style={{ ...S.card, cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <div>
+                  <div style={{ fontWeight:"bold", color:"#1e40af" }}>{r.name}</div>
+                  {r.nameHe && <div style={{ fontSize:12, color:"#555" }}>{r.nameHe}</div>}
+                  <div style={{ fontSize:12, color:"#888", marginTop:2 }}>
+                    #{r.id} · <span style={{ ...S.badge("#dcfce7"), color:"#166534" }}>{r.discount}%</span>
+                    {r.address && ` · ${r.address}`}
+                  </div>
+                </div>
+                <div style={{ color:"#0078d4", fontSize:18 }}>›</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab==="resellers" && sel && !editMode && (
+          <div>
+            <button onClick={()=>setSel(null)} style={{ border:"none", background:"none", color:"#0078d4", cursor:"pointer", fontSize:13, marginBottom:12 }}>← חזור</button>
+            <div style={S.card}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                <div>
+                  <div style={{ fontSize:18, fontWeight:"bold", color:"#1e40af" }}>{sel.name}</div>
+                  {sel.nameHe && <div style={{ fontSize:14, color:"#555", marginBottom:2 }}>{sel.nameHe}</div>}
+                  <div style={{ fontSize:12, color:"#888" }}>מספר: {sel.id}</div>
+                </div>
+                <span style={{ ...S.badge("#dcfce7"), color:"#166534", fontSize:15, padding:"3px 12px" }}>{sel.discount}%</span>
+              </div>
+              {sel.phone && <div style={{ marginBottom:6 }}><a href={`tel:${sel.phone}`} style={{ color:"#0078d4", textDecoration:"none" }}>📞 {sel.phone}</a></div>}
+              {sel.email && <div style={{ marginBottom:6 }}><a href={`mailto:${sel.email}`} style={{ color:"#0078d4", textDecoration:"none" }}>✉️ {sel.email}</a></div>}
+              {sel.address && <div style={{ fontSize:13, color:"#555" }}>📍 {sel.address}</div>}
+              <div style={{ display:"flex", gap:8, marginTop:12 }}>
+                <button style={S.btn()} onClick={() => { setEditData({...sel}); setEditMode(true); }}>✏️ עריכה</button>
+                <button style={S.btn("#dc2626")} onClick={() => {
+                  if (window.confirm(`למחוק את ${sel.name}?`)) { setResellers(p=>p.filter(r=>r.id!==sel.id)); setSel(null); }
+                }}>🗑 מחק</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab==="resellers" && sel && editMode && editData && (
+          <div>
+            <button onClick={()=>setEditMode(false)} style={{ border:"none", background:"none", color:"#0078d4", cursor:"pointer", fontSize:13, marginBottom:12 }}>← ביטול</button>
+            <div style={S.card}>
+              <div style={{ fontWeight:"bold", marginBottom:10, color:"#1e40af" }}>✏️ עריכת {sel.name}</div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                {[["שם באנגלית","name"],["שם בעברית","nameHe"],["מספר משווק","id"],["אחוז הנחה","discount"],["טלפון","phone"],["אימייל","email"]].map(([lbl,key]) => (
+                  <div key={key}>
+                    <span style={S.label}>{lbl}</span>
+                    <input style={S.input} value={editData[key]||""} onChange={e=>setEditData(p=>({...p,[key]:e.target.value}))} type={key==="discount"?"number":"text"} />
+                  </div>
+                ))}
+                <div style={{ gridColumn:"1/-1" }}>
+                  <span style={S.label}>כתובת</span>
+                  <input style={S.input} value={editData.address||""} onChange={e=>setEditData(p=>({...p,address:e.target.value}))} />
+                </div>
+              </div>
+              <button style={{ ...S.btn(), marginTop:10 }} onClick={() => {
+                const updated = { ...editData, discount: parseFloat(editData.discount)||12.5 };
+                setResellers(p => p.map(r => r.id===sel.id ? updated : r));
+                setSel(updated); setEditMode(false);
+              }}>💾 שמור</button>
+            </div>
+          </div>
+        )}
+
+        {/* ─── CLOUD PRICE TAB ─── */}
+        {tab==="cloud" && (
+          <div>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:10 }}>
+              <select value={priceType} onChange={e=>setPriceType(e.target.value)} style={{ ...S.input, width:"auto", flex:"0 0 auto" }}>
+                <option value="corp">🏢 Corporate</option>
+                <option value="edu">🎓 Education</option>
+              </select>
+              <select value={priceModel} onChange={e=>setPriceModel(e.target.value)} style={{ ...S.input, width:"auto", flex:"0 0 auto" }}>
+                <option value="annual">שנתי/שנתי</option>
+                <option value="monthly">שנתי/חודשי</option>
+                <option value="mthly">חודשי/חודשי</option>
+              </select>
+              <select value={selResForPrice} onChange={e=>setSelResForPrice(e.target.value)} style={{ ...S.input, flex:1, minWidth:120 }}>
+                <option value="">— בחר משווק —</option>
+                {resellers.map(r => <option key={r.id} value={r.id}>{r.name} ({r.discount}%)</option>)}
+              </select>
+            </div>
+            <input value={priceSearch} onChange={e=>setPriceSearch(e.target.value)} placeholder="🔍 חפש מוצר..." style={{ ...S.input, marginBottom:10 }} />
+            <div style={{ overflowX:"auto" }}>
+              <table style={{ width:"100%", borderCollapse:"collapse", background:"#fff", borderRadius:8, fontSize:12 }}>
+                <thead>
+                  <tr style={{ background:"#0078d4", color:"#fff" }}>
+                    <th style={{ padding:"8px 10px", textAlign:"right" }}>מוצר</th>
+                    <th style={{ padding:"8px", textAlign:"center", minWidth:90 }}>מחיר שלי</th>
+                    <th style={{ padding:"8px", textAlign:"center", minWidth:90 }}>מחיר לקוח</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCloud.map((p,i) => {
+                    const disc = selResForPrice ? getDiscForRes(selResForPrice) : 12.5;
+                    const { partner, endUser } = getCloudPrice(p, priceModel, disc);
+                    return (
+                      <tr key={p.sku} style={{ background:i%2===0?"#f8fafc":"#fff", borderBottom:"1px solid #e2e8f0" }}>
+                        <td style={{ padding:"6px 10px" }}>
+                          <div style={{ fontWeight:"bold" }}>{p.desc}</div>
+                          <div style={{ fontSize:10, color:"#aaa" }}>{p.sku}</div>
+                        </td>
+                        <td style={{ padding:"6px", textAlign:"center", color:"#166534", fontWeight:"bold" }}>{fmt(partner)}</td>
+                        <td style={{ padding:"6px", textAlign:"center", color:"#991b1b" }}>{fmt(endUser)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ─── PERPETUAL PRICE TAB ─── */}
+        {tab==="perp" && (
+          <div>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:10 }}>
+              <select value={perpType} onChange={e=>setPerpType(e.target.value)} style={{ ...S.input, width:"auto", flex:"0 0 auto" }}>
+                <option value="corp">🏢 Corporate</option>
+                <option value="edu">🎓 Education</option>
+              </select>
+              <select value={selResForPerp} onChange={e=>setSelResForPerp(e.target.value)} style={{ ...S.input, flex:1, minWidth:120 }}>
+                <option value="">— משווק (לתצוגה) —</option>
+                {resellers.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </select>
+              <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                <span style={{ fontSize:12, whiteSpace:"nowrap" }}>הנחה נוספת:</span>
+                <input type="number" min="0" max="50" value={perpExtraDisc} onChange={e=>setPerpExtraDisc(Number(e.target.value))}
+                  style={{ ...S.input, width:60 }} />
+                <span style={{ fontSize:12 }}>%</span>
+              </div>
+            </div>
+            <input value={perpSearch} onChange={e=>setPerpSearch(e.target.value)} placeholder="🔍 חפש מוצר..." style={{ ...S.input, marginBottom:10 }} />
+            <div style={{ fontSize:11, color:"#666", marginBottom:8, padding:"6px 10px", background:"#eff6ff", borderRadius:6 }}>
+              💡 מחיר שלי = Partner Price פחות 2% (+ הנחה נוספת אם הוגדרה) · מחיר לקוח = Partner Price
+            </div>
+            <div style={{ overflowX:"auto" }}>
+              <table style={{ width:"100%", borderCollapse:"collapse", background:"#fff", borderRadius:8, fontSize:12 }}>
+                <thead>
+                  <tr style={{ background:"#7c3aed", color:"#fff" }}>
+                    <th style={{ padding:"8px 10px", textAlign:"right" }}>מוצר</th>
+                    <th style={{ padding:"8px", textAlign:"center", minWidth:90 }}>Partner Price</th>
+                    <th style={{ padding:"8px", textAlign:"center", minWidth:90 }}>מחיר שלי</th>
+                    <th style={{ padding:"8px", textAlign:"center", minWidth:90 }}>מחיר לקוח</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    let lastGroup = "";
+                    return filteredPerp.map((p,i) => {
+                      const showGroup = p.group !== lastGroup;
+                      lastGroup = p.group;
+                      const { myPrice, endUser } = getPerpPrice(p, perpExtraDisc);
+                      return [
+                        showGroup && <tr key={`g-${p.group}`}><td colSpan={4} style={{ background:"#f3e8ff", color:"#6d28d9", fontWeight:"bold", padding:"5px 10px", fontSize:11 }}>📦 {p.group}</td></tr>,
+                        <tr key={p.sku} style={{ background:i%2===0?"#f8fafc":"#fff", borderBottom:"1px solid #e2e8f0" }}>
+                          <td style={{ padding:"6px 10px" }}>
+                            <div>{p.desc}</div>
+                            <div style={{ fontSize:10, color:"#aaa" }}>{p.sku}</div>
+                          </td>
+                          <td style={{ padding:"6px", textAlign:"center", color:"#555" }}>{fmt(p.partnerPrice)}</td>
+                          <td style={{ padding:"6px", textAlign:"center", color:"#166534", fontWeight:"bold" }}>{fmt(myPrice)}</td>
+                          <td style={{ padding:"6px", textAlign:"center", color:"#991b1b" }}>{fmt(endUser)}</td>
+                        </tr>
+                      ];
+                    });
+                  })()}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ─── CALCULATOR TAB ─── */}
+        {tab==="calc" && (
+          <div>
+            {/* Cloud Calculator */}
+            <div style={{ ...S.card, marginBottom:16 }}>
+              <div style={{ fontWeight:"bold", color:"#1e40af", marginBottom:10, fontSize:15 }}>☁️ מחשבון Cloud</div>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:10 }}>
+                <select value={calcRes} onChange={e=>setCalcRes(e.target.value)} style={{ ...S.input, flex:1, minWidth:150 }}>
+                  <option value="">— בחר משווק —</option>
+                  {resellers.map(r => <option key={r.id} value={r.id}>{r.name} ({r.discount}%)</option>)}
+                </select>
+                <select value={calcModel} onChange={e=>setCalcModel(e.target.value)} style={{ ...S.input, width:"auto" }}>
+                  <option value="annual">שנתי/שנתי</option>
+                  <option value="monthly">שנתי/חודשי</option>
+                  <option value="mthly">חודשי/חודשי</option>
+                </select>
+              </div>
+              {calcItems.map((item, idx) => {
+                const allCloud = [...CLOUD_CORP, ...CLOUD_EDU];
+                const prod = allCloud.find(p => p.sku === item.sku);
+                const disc = calcRes ? getDiscForRes(calcRes) : 12.5;
+                const price = prod ? getCloudPrice(prod, calcModel, disc).partner : null;
+                return (
+                  <div key={idx} style={{ display:"flex", gap:6, marginBottom:6, alignItems:"center" }}>
+                    <select value={item.sku} onChange={e=>setCalcItems(p=>p.map((x,i)=>i===idx?{...x,sku:e.target.value}:x))}
+                      style={{ ...S.input, flex:3 }}>
+                      <option value="">— בחר מוצר —</option>
+                      <optgroup label="Corporate">
+                        {CLOUD_CORP.map(p => <option key={p.sku} value={p.sku}>{p.desc}</option>)}
+                      </optgroup>
+                      <optgroup label="Education">
+                        {CLOUD_EDU.map(p => <option key={p.sku} value={p.sku}>{p.desc}</option>)}
+                      </optgroup>
+                    </select>
+                    <input type="number" min="1" value={item.qty} onChange={e=>setCalcItems(p=>p.map((x,i)=>i===idx?{...x,qty:e.target.value}:x))}
+                      style={{ ...S.input, width:60, flex:"0 0 60px" }} placeholder="כמות" />
+                    {price != null && <span style={{ fontSize:12, color:"#166534", fontWeight:"bold", whiteSpace:"nowrap" }}>{fmt(price * Number(item.qty||1))}</span>}
+                    <button onClick={()=>setCalcItems(p=>p.filter((_,i)=>i!==idx))} style={{ ...S.btnSm("#dc2626"), flex:"0 0 auto" }}>✕</button>
+                  </div>
+                );
+              })}
+              <div style={{ display:"flex", gap:8, alignItems:"center", marginTop:6 }}>
+                <button style={S.btnSm()} onClick={()=>setCalcItems(p=>[...p,{sku:"",qty:1}])}>+ הוסף שורה</button>
+                <div style={{ marginRight:"auto", fontWeight:"bold", color:"#0078d4", fontSize:15 }}>
+                  סה"כ: {fmt(cloudCalcTotal)}
+                </div>
+              </div>
+            </div>
+
+            {/* Perpetual Calculator */}
+            <div style={S.card}>
+              <div style={{ fontWeight:"bold", color:"#6d28d9", marginBottom:10, fontSize:15 }}>📦 מחשבון Perpetual</div>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:10, alignItems:"center" }}>
+                <select value={perpCalcRes} onChange={e=>setPerpCalcRes(e.target.value)} style={{ ...S.input, flex:1, minWidth:150 }}>
+                  <option value="">— בחר משווק (אופציונלי) —</option>
+                  {resellers.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+                <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ fontSize:12, whiteSpace:"nowrap" }}>הנחה נוספת:</span>
+                  <input type="number" min="0" max="50" value={perpCalcExtraDisc} onChange={e=>setPerpCalcExtraDisc(Number(e.target.value))}
+                    style={{ ...S.input, width:60 }} />
+                  <span style={{ fontSize:12 }}>%</span>
+                </div>
+              </div>
+              {perpCalcItems.map((item, idx) => {
+                const allPerp = [...PERP_CORP, ...PERP_EDU];
+                const prod = allPerp.find(p => p.sku === item.sku);
+                const price = prod ? getPerpPrice(prod, perpCalcExtraDisc).myPrice : null;
+                return (
+                  <div key={idx} style={{ display:"flex", gap:6, marginBottom:6, alignItems:"center" }}>
+                    <select value={item.sku} onChange={e=>setPerpCalcItems(p=>p.map((x,i)=>i===idx?{...x,sku:e.target.value}:x))}
+                      style={{ ...S.input, flex:3 }}>
+                      <option value="">— בחר מוצר —</option>
+                      <optgroup label="Corporate">
+                        {PERP_CORP.map(p => <option key={p.sku} value={p.sku}>{p.desc}</option>)}
+                      </optgroup>
+                      <optgroup label="Education">
+                        {PERP_EDU.map(p => <option key={p.sku} value={p.sku}>{p.desc}</option>)}
+                      </optgroup>
+                    </select>
+                    <input type="number" min="1" value={item.qty} onChange={e=>setPerpCalcItems(p=>p.map((x,i)=>i===idx?{...x,qty:e.target.value}:x))}
+                      style={{ ...S.input, width:60, flex:"0 0 60px" }} placeholder="כמות" />
+                    {price != null && <span style={{ fontSize:12, color:"#166534", fontWeight:"bold", whiteSpace:"nowrap" }}>{fmt(price * Number(item.qty||1))}</span>}
+                    <button onClick={()=>setPerpCalcItems(p=>p.filter((_,i)=>i!==idx))} style={{ ...S.btnSm("#dc2626"), flex:"0 0 auto" }}>✕</button>
+                  </div>
+                );
+              })}
+              <div style={{ display:"flex", gap:8, alignItems:"center", marginTop:6 }}>
+                <button style={S.btnSm("#6d28d9")} onClick={()=>setPerpCalcItems(p=>[...p,{sku:"",qty:1}])}>+ הוסף שורה</button>
+                <div style={{ marginRight:"auto", fontWeight:"bold", color:"#6d28d9", fontSize:15 }}>
+                  סה"כ: {fmt(perpCalcTotal)}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── CONSUMPTION TAB ─── */}
+        {tab==="consumption" && (
+          <div>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:10 }}>
+              <div>
+                <span style={S.label}>חודש נוכחי</span>
+                <input type="month" value={consMonth} onChange={e=>setConsMonth(e.target.value)} style={S.input} />
+              </div>
+              <div>
+                <span style={S.label}>חודש קודם</span>
+                <input type="month" value={prevMonth} onChange={e=>setPrevMonth(e.target.value)} style={S.input} />
+              </div>
+            </div>
+            <input value={consSearch} onChange={e=>setConsSearch(e.target.value)} placeholder="🔍 חפש משווק..." style={{ ...S.input, marginBottom:10 }} />
+            <div style={{ overflowX:"auto" }}>
+              <table style={{ width:"100%", borderCollapse:"collapse", background:"#fff", borderRadius:8, fontSize:12 }}>
+                <thead>
+                  <tr style={{ background:"#0078d4", color:"#fff" }}>
+                    <th style={{ padding:"8px 10px", textAlign:"right" }}>משווק</th>
+                    <th style={{ padding:"8px", textAlign:"center", minWidth:110 }}>חודש קודם</th>
+                    <th style={{ padding:"8px", textAlign:"center", minWidth:110 }}>חודש נוכחי</th>
+                    <th style={{ padding:"8px", textAlign:"center", minWidth:80 }}>שינוי</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {consFiltered.map((r,i) => {
+                    const prev = parseFloat(getConsVal(r.id, prevMonth)) || 0;
+                    const curr = parseFloat(getConsVal(r.id, consMonth)) || 0;
+                    const diff = curr - prev;
+                    const pct = prev > 0 ? ((diff/prev)*100).toFixed(0) : null;
+                    return (
+                      <tr key={r.id} style={{ background:i%2===0?"#f8fafc":"#fff", borderBottom:"1px solid #e2e8f0" }}>
+                        <td style={{ padding:"6px 10px" }}>
+                          <div style={{ fontWeight:"bold" }}>{r.name}</div>
+                          {r.nameHe && <div style={{ fontSize:11, color:"#777" }}>{r.nameHe}</div>}
+                          <div style={{ fontSize:10, color:"#aaa" }}>#{r.id}</div>
+                        </td>
+                        <td style={{ padding:"4px 6px", textAlign:"center" }}>
+                          <input type="number" value={getConsVal(r.id, prevMonth)} onChange={e=>setConsVal(r.id, prevMonth, e.target.value)}
+                            placeholder="0" style={{ width:90, padding:4, border:"1px solid #d1d5db", borderRadius:4, textAlign:"center", fontSize:12 }} />
+                        </td>
+                        <td style={{ padding:"4px 6px", textAlign:"center" }}>
+                          <input type="number" value={getConsVal(r.id, consMonth)} onChange={e=>setConsVal(r.id, consMonth, e.target.value)}
+                            placeholder="0" style={{ width:90, padding:4, border:"1px solid #d1d5db", borderRadius:4, textAlign:"center", fontSize:12 }} />
+                        </td>
+                        <td style={{ padding:"4px 6px", textAlign:"center" }}>
+                          {(prev > 0 || curr > 0) && (
+                            <span style={{ color: diff>0?"#059669":diff<0?"#dc2626":"#888", fontWeight:"bold" }}>
+                              {diff>0?"▲":diff<0?"▼":"➡"} {Math.abs(diff).toFixed(0)}{pct ? ` (${pct}%)` : ""}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
+  );
+}
 
-    <div style={{display:"flex",background:"#fff",borderBottom:"2px solid #e0e7ff",overflowX:"auto"}}>
-      {nav.map(([id,label])=>(<button key={id} onClick={()=>{setTab(id);setSel(null);setEditMode(false);setShowAdd(false);}}
-        style={{padding:"10px 12px",border:"none",background:"none",cursor:"pointer",fontWeight:tab===id?"bold":"normal",borderBottom:tab===id?"3px solid #0078d4":"3px solid transparent",color:tab===id?"#0078d4":"#444",whiteSpace:"nowrap",fontSize:12}}>{label}</button>))}
-    </div>
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
 
-    <div style={{padding:12,maxWidth:900,margin:"0 auto"}}>
-
-      {/* משווקים */}
-      {tab==="resellers"&&!sel&&!showAdd&&(<div>
-        <div style={{display:"flex",gap:8,marginBottom:12}}>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 חפש שם, מספר, כתובת..." style={{flex:1,padding:"10px 12px",border:"1px solid #c7d2fe",borderRadius:8,fontSize:14}}/>
-          <button onClick={()=>setShowAdd(true)} style={{background:"#059669",color:"#fff",border:"none",borderRadius:8,padding:"0 14px",cursor:"pointer",fontWeight:"bold",whiteSpace:"nowrap"}}>+ הוסף</button>
-        </div>
-        <div style={{fontSize:12,color:"#888",marginBottom:8}}>{filtered.length} משווקים</div>
-        {filtered.map(r=>(<div key={r.id} onClick={()=>setSel(r)} style={{background:"#fff",border:"1px solid #e0e7ff",borderRadius:10,padding:"10px 14px",marginBottom:8,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div><div style={{fontWeight:"bold",color:"#1e40af"}}>{r.name}</div>{r.nameHe&&<div style={{fontSize:12,color:"#555"}}>{r.nameHe}</div>}<div style={{fontSize:12,color:"#888"}}>#{r.id} · {r.discount}%{r.address?` · ${r.address}`:""}</div></div>
-          <div style={{color:"#0078d4",fontSize:18}}>›</div>
-        </div>))}
-      </div>)}
-
-      {tab==="resellers"&&showAdd&&(<div>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
-          <button onClick={()=>setShowAdd(false)} style={{border:"none",background:"none",color:"#0078d4",cursor:"pointer",fontSize:13}}>← ביטול</button>
-          <button onClick={addReseller} style={{background:"#059669",color:"#fff",border:"none",borderRadius:6,padding:"6px 14px",cursor:"pointer"}}>+ הוסף</button>
-        </div>
-        <div style={{background:"#fff",borderRadius:12,padding:16,border:"1px solid #e0e7ff"}}>
-          <div style={{fontWeight:"bold",marginBottom:12,color:"#1e40af"}}>הוספת משווק חדש</div>
-          {[["name","שם באנגלית *"],["nameHe","שם בעברית"],["id","מספר משווק *"],["address","כתובת"],["phone","טלפון"],["email","אימייל"]].map(([f,l])=>(<div key={f}><label style={{fontSize:12,color:"#666"}}>{l}</label><input value={newRes[f]||""} onChange={e=>setNewRes(p=>({...p,[f]:e.target.value}))} {...inp}/></div>))}
-          <label style={{fontSize:12,color:"#666"}}>אחוז הנחה (%)</label>
-          <input type="number" value={newRes.discount} onChange={e=>setNewRes(p=>({...p,discount:parseFloat(e.target.value)||0}))} {...inp}/>
-        </div>
-      </div>)}
-
-      {tab==="resellers"&&sel&&!editMode&&(<div>
-        <button onClick={()=>setSel(null)} style={{border:"none",background:"none",color:"#0078d4",cursor:"pointer",fontSize:13,marginBottom:12}}>← חזור</button>
-        <div style={{background:"#fff",borderRadius:12,padding:16,border:"1px solid #e0e7ff"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
-            <div><div style={{fontSize:18,fontWeight:"bold",color:"#1e40af"}}>{sel.name}</div>{sel.nameHe&&<div style={{fontSize:14,color:"#555",marginBottom:2}}>{sel.nameHe}</div>}<div style={{fontSize:12,color:"#888"}}>מספר: {sel.id}</div></div>
-            <div style={{display:"flex",gap:6}}>
-              <button onClick={()=>startEdit(sel)} style={{background:"#0078d4",color:"#fff",border:"none",borderRadius:6,padding:"6px 12px",cursor:"pointer",fontSize:12}}>✏️ ערוך</button>
-              <button onClick={()=>setConfirmDelete(sel.id)} style={{background:"#fee2e2",color:"#dc2626",border:"none",borderRadius:6,padding:"6px 12px",cursor:"pointer",fontSize:12}}>🗑 מחק</button>
-            </div>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
-            <div style={{background:"#eff6ff",borderRadius:8,padding:10}}><div style={{fontSize:11,color:"#888"}}>הנחה</div><div style={{fontSize:22,fontWeight:"bold",color:"#1e40af"}}>{sel.discount}%</div></div>
-            {sel.address&&<div style={{background:"#fefce8",borderRadius:8,padding:10}}><div style={{fontSize:11,color:"#888"}}>📍 כתובת</div><div style={{fontSize:12,color:"#713f12"}}>{sel.address}</div></div>}
-          </div>
-          {sel.phone&&<div style={{marginBottom:8}}><a href={`tel:${sel.phone}`} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#0078d4",color:"#fff",padding:"8px 16px",borderRadius:8,textDecoration:"none",fontSize:13}}>📞 {sel.phone}</a></div>}
-          {sel.email&&<div style={{marginBottom:16}}><a href={`mailto:${sel.email}`} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#059669",color:"#fff",padding:"8px 16px",borderRadius:8,textDecoration:"none",fontSize:13}}>✉️ {sel.email}</a></div>}
-          <div style={{fontWeight:"bold",marginBottom:8}}>אנשי קשר ({(sel.contacts||[]).length})</div>
-          {(sel.contacts||[]).map((c,i)=>(<div key={i} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:10,marginBottom:8}}>
-            <div style={{fontWeight:"bold",marginBottom:4}}>{c.name} <span style={{fontSize:11,color:"#888",fontWeight:"normal"}}>· {c.role}{c.position?` · ${c.position}`:""}</span></div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              {c.phone&&<a href={`tel:${c.phone}`} style={{color:"#0078d4",textDecoration:"none",fontSize:12}}>📞 {c.phone}</a>}
-              {c.email&&<a href={`mailto:${c.email}`} style={{color:"#059669",textDecoration:"none",fontSize:12}}>✉️ {c.email}</a>}
-            </div>
-          </div>))}
-          {(!sel.contacts||sel.contacts.length===0)&&<div style={{color:"#aaa",fontSize:12,fontStyle:"italic"}}>אין אנשי קשר</div>}
-        </div>
-      </div>)}
-
-      {tab==="resellers"&&editMode&&editData&&(<div>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
-          <button onClick={()=>{setEditMode(false);setEditData(null);}} style={{border:"none",background:"none",color:"#0078d4",cursor:"pointer",fontSize:13}}>← ביטול</button>
-          <button onClick={saveEdit} style={{background:"#059669",color:"#fff",border:"none",borderRadius:6,padding:"6px 14px",cursor:"pointer"}}>💾 שמור</button>
-        </div>
-        <div style={{background:"#fff",borderRadius:12,padding:16,border:"1px solid #e0e7ff"}}>
-          <div style={{fontWeight:"bold",fontSize:16,marginBottom:12,color:"#1e40af"}}>{editData.name}</div>
-          {[["nameHe","שם בעברית"],["address","כתובת"],["phone","טלפון ראשי"],["email","אימייל ראשי"]].map(([f,l])=>(<div key={f}><label style={{fontSize:12,color:"#666"}}>{l}</label><input value={editData[f]||""} onChange={e=>setEditData(p=>({...p,[f]:e.target.value}))} {...inp}/></div>))}
-          <label style={{fontSize:12,color:"#666"}}>אחוז הנחה (%)</label>
-          <input type="number" value={editData.discount} onChange={e=>setEditData(p=>({...p,discount:parseFloat(e.target.value)||0}))} style={{...inp.style,marginBottom:16}}/>
-          <div style={{fontWeight:"bold",marginBottom:8}}>אנשי קשר</div>
-          {(editData.contacts||[]).map((c,i)=>(<div key={i} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:10,marginBottom:8}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
-              {[["name","שם"],["position","תפקיד"],["phone","טלפון"],["email","אימייל"]].map(([f,l])=>(<div key={f}><label style={{fontSize:11,color:"#888"}}>{l}</label><input value={c[f]||""} onChange={e=>{const nc=[...editData.contacts];nc[i]={...nc[i],[f]:e.target.value};setEditData(p=>({...p,contacts:nc}));}} style={{width:"100%",padding:6,border:"1px solid #d1d5db",borderRadius:4,fontSize:12,boxSizing:"border-box"}}/></div>))}
-            </div>
-            <select value={c.role||"עסקי"} onChange={e=>{const nc=[...editData.contacts];nc[i]={...nc[i],role:e.target.value};setEditData(p=>({...p,contacts:nc}));}} style={{padding:"4px 8px",border:"1px solid #d1d5db",borderRadius:4,fontSize:12,marginBottom:6}}>
-              <option value="עסקי">עסקי</option><option value="טכני">טכני</option>
-            </select>
-            <button onClick={()=>setEditData(p=>({...p,contacts:p.contacts.filter((_,idx)=>idx!==i)}))} style={{background:"#fee2e2",color:"#dc2626",border:"none",borderRadius:4,padding:"4px 8px",cursor:"pointer",fontSize:11}}>🗑 הסר</button>
-          </div>))}
-          <button onClick={()=>setEditData(p=>({...p,contacts:[...(p.contacts||[]),{name:"",role:"עסקי",position:"",email:"",phone:""}]}))} style={{background:"#eff6ff",color:"#0078d4",border:"1px dashed #93c5fd",borderRadius:6,padding:"8px 14px",cursor:"pointer",width:"100%",marginTop:4}}>+ הוסף איש קשר</button>
-        </div>
-      </div>)}
-
-      {/* מחירונים */}
-      {tab==="prices"&&(<div>
-        <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}>
-          {[["corp","☁️ Cloud Corp"],["edu","🎓 Cloud חינוך"],["perpCorp","💿 Perp Corp"],["perpEdu","🎓 Perp חינוך"]].map(([k,l])=>(<button key={k} onClick={()=>setPriceTab(k)} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #c7d2fe",cursor:"pointer",background:priceTab===k?"#0078d4":"#fff",color:priceTab===k?"#fff":"#374151",fontSize:12}}>{l}</button>))}
-          <button onClick={()=>fileRef.current.click()} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #059669",cursor:"pointer",background:"#f0fdf4",color:"#059669",fontSize:12}}>📂 טען CSV</button>
-          <input ref={fileRef} type="file" accept=".csv" onChange={handleCSV} style={{display:"none"}}/>
-          {customPrices[priceTab]&&<button onClick={()=>setCustomPrices(p=>({...p,[priceTab]:null}))} style={{padding:"4px 8px",borderRadius:4,border:"1px solid #f59e0b",background:"#fef3c7",color:"#92400e",fontSize:11,cursor:"pointer"}}>↺ איפוס</button>}
-        </div>
-        <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-          <input value={priceSearch} onChange={e=>setPriceSearch(e.target.value)} placeholder="🔍 חפש מוצר..." style={{flex:1,minWidth:150,padding:"8px 10px",border:"1px solid #c7d2fe",borderRadius:6,fontSize:13}}/>
-          {!isPerp&&<select value={priceRes} onChange={e=>setPriceRes(e.target.value)} style={{padding:"8px 10px",border:"1px solid #c7d2fe",borderRadius:6,fontSize:12}}>
-            <option value="">ברירת מחדל (12.5%)</option>
-            {resellers.map(r=><option key={r.id} value
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
