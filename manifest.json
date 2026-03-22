@@ -1,0 +1,16 @@
+{
+  "name": "MS Partners Manager",
+  "short_name": "MS Partners",
+  "description": "מנהל משווקים Microsoft - CMS Compucenter",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0078d4",
+  "theme_color": "#0078d4",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    { "src": "icon.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
