@@ -1,6 +1,3 @@
-
-const {useState,useMemo,useEffect,useRef} = React;
-
 // ── DATA ──────────────────────────────────────────────────────────────────────
 const CONTACTS_RAW = [
   {resellerId:"010849",name:"נמרוד קליינמן",role:"טכני",position:"בעלים",email:"NimrodK@Oriental.co.il",phone:"052-3502154"},
@@ -328,5 +325,3 @@ const PERP_EDU = [
   {sku:"DG7GMGF0F4MC:0003-E",group:"Exchange Server",desc:"Exchange Server Standard 2019",partnerPrice:178.03},
   {sku:"DG7GMGF0F4LT:0002-E",group:"SharePoint Server",desc:"SharePoint Server 2019",partnerPrice:1706.39},
 ];
-
-// ── HELPERS ───────────────────────────────────────────────────────────────────
