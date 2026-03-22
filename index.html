@@ -8,7 +8,7 @@
 <title>מנהל משווקים Microsoft</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 <script src="data.js"></script>
 <!-- SheetJS לקריאת Excel -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -23,6 +23,23 @@ input,select,button,textarea{font-family:inherit;}
 </head>
 <body>
 <div id="root"></div>
+<div id="err" style="display:none;padding:20px;background:#fee;color:#c00;font-family:monospace;font-size:13px;white-space:pre-wrap"></div>
+<script>
+window.onerror = function(msg,src,line,col,err){
+  var d=document.getElementById('err');
+  d.style.display='block';
+  d.textContent='ERROR: '+msg+'
+File: '+src+'
+Line: '+line+'
+'+(err&&err.stack?err.stack:'');
+  document.getElementById('root').style.display='none';
+};
+window.addEventListener('unhandledrejection',function(e){
+  var d=document.getElementById('err');
+  d.style.display='block';
+  d.textContent='PROMISE ERROR: '+(e.reason&&e.reason.message?e.reason.message:e.reason);
+});
+</script>
 <script type="text/babel">
 const SK={res:"ms_res_v5",cons:"ms_cons_v1",auth:"ms_auth_v2",prices:"ms_prices_v1"};
 // תאימות לאחור — אם יש auth ישן, העבר אותו
