@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0078d4">
+<link rel="manifest" href="manifest.json">
+<title>מנהל משווקים Microsoft</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="data.js"></script>
+<!-- SheetJS לקריאת Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4ff;min-height:100vh;font-size:14px;}
+input,select,button,textarea{font-family:inherit;}
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:#f1f5f9;}
+::-webkit-scrollbar-thumb{background:#93c5fd;border-radius:3px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const SK={res:"ms_res_v5",cons:"ms_cons_v1",auth:"ms_auth_v2",prices:"ms_prices_v1"};
+// תאימות לאחור — אם יש auth ישן, העבר אותו
+(()=>{try{const old=localStorage.getItem("ms_auth_v1");if(old&&!localStorage.getItem("ms_auth_v2")){const p=JSON.parse(old);localStorage.setItem("ms_auth_v2",JSON.stringify({...p,use2fa:false}));}}catch{}})();
+const ld=(k,d)=>{try{const s=localStorage.getItem(k);return s?JSON.parse(s):d;}catch{return d;}};
+const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
+const fmt=n=>n==null?"—":`${Number(n).toFixed(2)}`;
+const dp=(p,pct)=>p*(1-pct/100);
+
+// ── TOTP ENGINE (RFC 6238) ─────────────────────────────────────────────────
+async function hmacSHA1(keyBytes,msgBytes){
+  const key=await crypto.subtle.importKey("raw",keyBytes,{name:"HMAC",hash:"SHA-1"},false,["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC",key,msgBytes));
+}
+function b32decode(s){
+  const a="ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits=0,val=0; const out=[];
+  for(const c of s.toUpperCase().replace(/=+$/,"")){
+    val=(val<<5)|a.indexOf(c); bits+=5;
+    if(bits>=8){bits-=8;out.push((val>>>bits)&0xff);}
+  }
+  return new Uint8Array(out);
+}
+async function genTOTP(secret,offset=0){
+  const cnt=Math.floor(Date.now()/1000/30)+offset;
+  const msg=new Uint8Array(8); let c=cnt;
+  for(let i=7;i>=0;i--){msg[i]=c&0xff;c>>=8;}
+  const h=await hmacSHA1(b32decode(secret),msg);
+  const o=h[19]&0xf;
+  const code=((h[o]&0x7f)<<24|h[o+1]<<16|h[o+2]<<8|h[o+3])%1000000;
+  return code.toString().padStart(6,"0");
+}
+function genSecret(){
+  const c="ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  const arr=new Uint8Array(20); crypto.getRandomValues(arr);
+  return Array.from(arr,b=>c[b%32]).join("");
+}
+const qrURL=text=>`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(text)}&color=0078d4&bgcolor=ffffff&margin=10`;
+
+// ── SETUP SCREEN (הגדרה ראשונית) ─────────────────────────────────────────
+function SetupScreen({onDone}) {
+  const [step,setStep]=useState(1); // 1=סיסמה, 2=QR/TOTP
+  const [pw,setPw]=useState(""); const [pw2,setPw2]=useState("");
+  const [secret]=useState(()=>genSecret());
+  const [totp,setTotp]=useState(""); const [err,setErr]=useState("");
+
+  function goStep2(){
+    if(pw.length<4) return setErr("סיסמה חייבת להיות לפחות 4 תווים");
+    if(pw!==pw2) return setErr("הסיסמאות לא תואמות");
+    setErr(""); setStep(2);
+  }
+  async function finish(){
+    const valid=await genTOTP(secret); const prev=await genTOTP(secret,-1);
+    if(totp!==valid&&totp!==prev) return setErr("קוד שגוי — נסה שוב (הקוד מתחלף כל 30 שניות)");
+    const cfg={password:pw,totpSecret:secret,setup:true,use2fa:true};
+    sv(SK.auth,cfg); onDone(cfg);
+  }
+
+  const otpUrl=`otpauth://totp/MSPartners?secret=${secret}&issuer=MSPartners&algorithm=SHA1&digits=6&period=30`;
+
+  return(
+    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0f172a,#1e3a5f)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:"#fff",borderRadius:20,padding:28,width:"100%",maxWidth:340,boxShadow:"0 25px 80px rgba(0,0,0,0.5)"}}>
+
+        {/* Step indicator */}
+        <div style={{display:"flex",justifyContent:"center",gap:8,marginBottom:20}}>
+          {[1,2].map(n=>(
+            <div key={n} style={{display:"flex",alignItems:"center",gap:6}}>
+              <div style={{width:28,height:28,borderRadius:"50%",background:step>=n?"#0078d4":"#e2e8f0",color:step>=n?"#fff":"#888",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:"bold"}}>{n}</div>
+              {n<2&&<div style={{width:30,height:2,background:step>n?"#0078d4":"#e2e8f0"}}/>}
+            </div>
+          ))}
+        </div>
+
+        {step===1&&(
+          <>
+            <div style={{textAlign:"center",marginBottom:20}}>
+              <div style={{fontSize:36,marginBottom:8}}>🔐</div>
+              <div style={{fontWeight:800,fontSize:17,color:"#1e40af"}}>הגדרת סיסמה</div>
+              <div style={{fontSize:12,color:"#888",marginTop:4}}>בחר סיסמה חזקה לכניסה לאפליקציה</div>
+            </div>
+            <label style={{fontSize:12,color:"#555",fontWeight:600}}>סיסמה</label>
+            <input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="לפחות 4 תווים" autoFocus
+              style={{width:"100%",padding:11,border:"1.5px solid #c7d2fe",borderRadius:8,marginBottom:10,marginTop:3,boxSizing:"border-box",fontSize:14,outline:"none"}}
+              onFocus={e=>e.target.style.borderColor="#0078d4"} onBlur={e=>e.target.style.borderColor="#c7d2fe"}/>
+            <label style={{fontSize:12,color:"#555",fontWeight:600}}>אשר סיסמה</label>
+            <input type="password" value={pw2} onChange={e=>setPw2(e.target.value)} placeholder="הכנס שוב"
+              onKeyDown={e=>e.key==="Enter"&&goStep2()}
+              style={{width:"100%",padding:11,border:"1.5px solid #c7d2fe",borderRadius:8,marginBottom:14,marginTop:3,boxSizing:"border-box",fontSize:14,outline:"none"}}
+              onFocus={e=>e.target.style.borderColor="#0078d4"} onBlur={e=>e.target.style.borderColor="#c7d2fe"}/>
+            {err&&<div style={{color:"#dc2626",fontSize:12,marginBottom:10,padding:"6px 10px",background:"#fef2f2",borderRadius:6}}>{err}</div>}
+            <button onClick={goStep2}
+              style={{width:"100%",padding:12,background:"linear-gradient(135deg,#0078d4,#106ebe)",color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:15,boxShadow:"0 4px 16px rgba(0,120,212,0.35)"}}>
+              המשך לאימות דו-שלבי →
+            </button>
+          </>
+        )}
+
+        {step===2&&(
+          <>
+            <div style={{textAlign:"center",marginBottom:16}}>
+              <div style={{fontSize:36,marginBottom:8}}>📱</div>
+              <div style={{fontWeight:800,fontSize:17,color:"#1e40af"}}>הגדרת אימות דו-שלבי</div>
+              <div style={{fontSize:12,color:"#888",marginTop:4}}>חובה להשלים לפני הכניסה</div>
+            </div>
+
+            <div style={{background:"#f0f4ff",borderRadius:10,padding:12,marginBottom:14,fontSize:12,color:"#374151",lineHeight:1.6}}>
+              <strong>שלב 1:</strong> פתח <strong>Google Authenticator</strong> או <strong>Microsoft Authenticator</strong><br/>
+              <strong>שלב 2:</strong> לחץ + → סרוק QR קוד<br/>
+              <strong>שלב 3:</strong> הכנס את הקוד שמוצג ↓
+            </div>
+
+            <div style={{textAlign:"center",marginBottom:12}}>
+              <img src={qrURL(otpUrl)} alt="QR" style={{width:160,height:160,borderRadius:10,border:"2px solid #e0e7ff"}}/>
+            </div>
+
+            <div style={{background:"#1e3a5f",borderRadius:8,padding:"10px 14px",marginBottom:4,textAlign:"center"}}>
+              <div style={{fontSize:10,color:"#93c5fd",marginBottom:4}}>🔑 מפתח ידני (אם לא ניתן לסרוק):</div>
+              <div style={{fontSize:13,color:"#fff",fontWeight:700,letterSpacing:3,wordBreak:"break-all",fontFamily:"monospace"}}>{secret}</div>
+            </div>
+            <div style={{fontSize:10,color:"#888",textAlign:"center",marginBottom:14}}>⚠️ שמור את המפתח הזה במקום בטוח!</div>
+
+            <label style={{fontSize:12,color:"#555",fontWeight:600}}>קוד מה-Authenticator (6 ספרות)</label>
+            <input value={totp} onChange={e=>setTotp(e.target.value.replace(/\D/g,"").slice(0,6))}
+              placeholder="123456" autoFocus inputMode="numeric"
+              onKeyDown={e=>e.key==="Enter"&&finish()}
+              style={{width:"100%",padding:12,border:"1.5px solid #c7d2fe",borderRadius:8,marginBottom:10,marginTop:3,boxSizing:"border-box",fontSize:20,textAlign:"center",letterSpacing:8,fontWeight:700,outline:"none"}}
+              onFocus={e=>e.target.style.borderColor="#0078d4"} onBlur={e=>e.target.style.borderColor="#c7d2fe"}/>
+            {err&&<div style={{color:"#dc2626",fontSize:12,marginBottom:10,padding:"6px 10px",background:"#fef2f2",borderRadius:6}}>{err}</div>}
+            <button onClick={finish}
+              style={{width:"100%",padding:12,background:"linear-gradient(135deg,#059669,#047857)",color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:15,boxShadow:"0 4px 16px rgba(5,150,105,0.35)"}}>
+              ✅ אשר והפעל
+            </button>
+            <button onClick={()=>{setStep(1);setErr("");}}
+              style={{width:"100%",padding:8,background:"none",border:"none",color:"#888",cursor:"pointer",fontSize:12,marginTop:8}}>← חזור</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── LOGIN SCREEN ──────────────────────────────────────────────────────────────
+function LoginScreen({onLogin,authCfg}) {
+  const [step,setStep]=useState(1); // 1=סיסמה, 2=TOTP
+  const [pw,setPw]=useState(""); const [totp,setTotp]=useState(""); const [err,setErr]=useState("");
+  const [attempts,setAttempts]=useState(0);
+
+  function checkPw(){
+    if(pw===authCfg.password){ setErr(""); if(authCfg.use2fa&&authCfg.totpSecret){setStep(2);}else{onLogin();} }
+    else{ setAttempts(a=>a+1); setErr(attempts>=2?"יותר מדי ניסיונות — נסה שוב עוד כמה שניות":"סיסמה שגויה"); }
+  }
+  async function checkTotp(){
+    const valid=await genTOTP(authCfg.totpSecret); const prev=await genTOTP(authCfg.totpSecret,-1); const next=await genTOTP(authCfg.totpSecret,1);
+    if(totp===valid||totp===prev||totp===next){setErr("");onLogin();}
+    else setErr("קוד שגוי — בדוק שהשעון מסונכרן");
+  }
+
+  return(
+    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0f172a,#0078d4)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:"#fff",borderRadius:20,padding:32,width:"100%",maxWidth:320,boxShadow:"0 25px 80px rgba(0,0,0,0.5)"}}>
+        <div style={{textAlign:"center",marginBottom:24}}>
+          <div style={{width:56,height:56,background:"linear-gradient(135deg,#0078d4,#003f8a)",borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 12px"}}>🏢</div>
+          <div style={{fontWeight:800,fontSize:18,color:"#1e40af"}}>מנהל משווקים</div>
+          <div style={{fontSize:12,color:"#888",marginTop:2}}>Microsoft Partners · CMS</div>
+        </div>
+
+        {step===1&&(
+          <>
+            <label style={{fontSize:12,color:"#555",fontWeight:600}}>🔑 סיסמה</label>
+            <input type="password" value={pw} onChange={e=>setPw(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&checkPw()} placeholder="הכנס סיסמה" autoFocus
+              style={{width:"100%",padding:11,border:"1.5px solid #c7d2fe",borderRadius:8,marginBottom:10,marginTop:3,boxSizing:"border-box",fontSize:14,outline:"none"}}
+              onFocus={e=>e.target.style.borderColor="#0078d4"} onBlur={e=>e.target.style.borderColor="#c7d2fe"}/>
+            {err&&<div style={{color:"#dc2626",fontSize:12,marginBottom:10,padding:"6px 10px",background:"#fef2f2",borderRadius:6}}>{err}</div>}
+            <button onClick={checkPw}
+              style={{width:"100%",padding:12,background:"linear-gradient(135deg,#0078d4,#106ebe)",color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,boxShadow:"0 4px 16px rgba(0,120,212,0.35)"}}>
+              כניסה →
+            </button>
+          </>
+        )}
+
+        {step===2&&(
+          <>
+            <div style={{textAlign:"center",marginBottom:16}}>
+              <div style={{fontSize:32,marginBottom:6}}>📱</div>
+              <div style={{fontWeight:700,fontSize:15,color:"#1e40af"}}>אימות דו-שלבי</div>
+              <div style={{fontSize:12,color:"#888",marginTop:4}}>פתח את האפליקציה ב-Authenticator</div>
+            </div>
+            <label style={{fontSize:12,color:"#555",fontWeight:600}}>קוד (6 ספרות)</label>
+            <input value={totp} onChange={e=>setTotp(e.target.value.replace(/\D/g,"").slice(0,6))}
+              placeholder="000000" autoFocus inputMode="numeric"
+              onKeyDown={e=>e.key==="Enter"&&checkTotp()}
+              style={{width:"100%",padding:12,border:"1.5px solid #c7d2fe",borderRadius:8,marginBottom:10,marginTop:3,boxSizing:"border-box",fontSize:22,textAlign:"center",letterSpacing:10,fontWeight:700,outline:"none"}}
+              onFocus={e=>e.target.style.borderColor="#0078d4"} onBlur={e=>e.target.style.borderColor="#c7d2fe"}/>
+            {err&&<div style={{color:"#dc2626",fontSize:12,marginBottom:10,padding:"6px 10px",background:"#fef2f2",borderRadius:6}}>{err}</div>}
+            <button onClick={checkTotp}
+              style={{width:"100%",padding:12,background:"linear-gradient(135deg,#059669,#047857)",color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,boxShadow:"0 4px 16px rgba(5,150,105,0.35)"}}>
+              ✅ אמת
+            </button>
+            <button onClick={()=>{setStep(1);setTotp("");setErr("");}}
+              style={{width:"100%",padding:8,background:"none",border:"none",color:"#888",cursor:"pointer",fontSize:12,marginTop:6}}>← חזור לסיסמה</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── SETTINGS MODAL ────────────────────────────────────────────────────────────
+function SettingsModal({authCfg,onSave,onClose}) {
+  const [tab,setTab]=useState("pw"); // pw | 2fa
+  const [pw,setPw]=useState(""); const [pw2,setPw2]=useState("");
+  const [totp,setTotp]=useState(""); const [newSecret]=useState(()=>genSecret());
+  const [err,setErr]=useState(""); const [ok,setOk]=useState("");
+  const [show2faSetup,setShow2faSetup]=useState(false);
+
+  async function savePw(){
+    if(pw.length<4) return setErr("לפחות 4 תווים");
+    if(pw!==pw2) return setErr("הסיסמאות לא תואמות");
+    const n={...authCfg,password:pw}; sv(SK.auth,n); onSave(n); setOk("✅ סיסמה עודכנה!"); setErr(""); setPw(""); setPw2("");
+  }
+  async function save2fa(){
+    const valid=await genTOTP(newSecret); const prev=await genTOTP(newSecret,-1);
+    if(totp!==valid&&totp!==prev) return setErr("קוד שגוי — נסה שוב");
+    const n={...authCfg,totpSecret:newSecret,use2fa:true}; sv(SK.auth,n); onSave(n); setOk("✅ 2FA עודכן!"); setErr("");
+  }
+  function disable2fa(){
+    const n={...authCfg,use2fa:false}; sv(SK.auth,n); onSave(n); setOk("⚠️ 2FA כובה"); setErr("");
+  }
+
+  const otpUrl=`otpauth://totp/MSPartners?secret=${newSecret}&issuer=MSPartners&algorithm=SHA1&digits=6&period=30`;
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}}>
+      <div style={{background:"#fff",borderRadius:16,padding:24,width:"100%",maxWidth:340,boxShadow:"0 20px 60px rgba(0,0,0,0.4)",maxHeight:"90vh",overflowY:"auto"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <div style={{fontWeight:800,fontSize:16}}>⚙️ הגדרות אבטחה</div>
+          <button onClick={onClose} style={{border:"none",background:"#f1f5f9",borderRadius:6,padding:"4px 8px",fontSize:16,cursor:"pointer"}}>✕</button>
+        </div>
+
+        {/* Tabs */}
+        <div style={{display:"flex",gap:6,marginBottom:16}}>
+          {[["pw","🔑 סיסמה"],["2fa","📱 2FA"]].map(([k,l])=>(
+            <button key={k} onClick={()=>{setTab(k);setErr("");setOk("");}}
+              style={{flex:1,padding:"7px 0",border:"1px solid #c7d2fe",borderRadius:7,cursor:"pointer",fontWeight:tab===k?700:400,background:tab===k?"#0078d4":"#fff",color:tab===k?"#fff":"#374151",fontSize:12}}>
+              {l}
+            </button>
+          ))}
+        </div>
+
+        {tab==="pw"&&(
+          <>
+            <label style={{fontSize:12,color:"#555",fontWeight:600}}>סיסמה חדשה</label>
+            <input type="password" value={pw} onChange={e=>setPw(e.target.value)}
+              style={{width:"100%",padding:9,border:"1px solid #c7d2fe",borderRadius:6,marginBottom:8,marginTop:3,boxSizing:"border-box",fontSize:13}}/>
+            <label style={{fontSize:12,color:"#555",fontWeight:600}}>אשר סיסמה</label>
+            <input type="password" value={pw2} onChange={e=>setPw2(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&savePw()}
+              style={{width:"100%",padding:9,border:"1px solid #c7d2fe",borderRadius:6,marginBottom:12,marginTop:3,boxSizing:"border-box",fontSize:13}}/>
+            <button onClick={savePw} style={{width:"100%",padding:10,background:"#0078d4",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontWeight:700}}>שמור סיסמה</button>
+          </>
+        )}
+
+        {tab==="2fa"&&(
+          <>
+            <div style={{background:authCfg.use2fa?"#f0fdf4":"#fef2f2",border:`1px solid ${authCfg.use2fa?"#bbf7d0":"#fecaca"}`,borderRadius:8,padding:"8px 12px",marginBottom:14,fontSize:12,color:authCfg.use2fa?"#166534":"#dc2626",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span>{authCfg.use2fa?"✅ אימות דו-שלבי פעיל":"❌ אימות דו-שלבי כבוי"}</span>
+              {authCfg.use2fa&&<button onClick={disable2fa} style={{background:"#fee2e2",color:"#dc2626",border:"none",borderRadius:5,padding:"2px 8px",cursor:"pointer",fontSize:11}}>כבה</button>}
+            </div>
+
+            {!show2faSetup&&(
+              <button onClick={()=>setShow2faSetup(true)}
+                style={{width:"100%",padding:10,background:authCfg.use2fa?"#f0f4ff":"linear-gradient(135deg,#059669,#047857)",color:authCfg.use2fa?"#0078d4":"#fff",border:authCfg.use2fa?"1px solid #c7d2fe":"none",borderRadius:8,cursor:"pointer",fontWeight:700,marginBottom:8}}>
+                {authCfg.use2fa?"🔄 עדכן מפתח 2FA":"➕ הפעל אימות דו-שלבי"}
+              </button>
+            )}
+
+            {show2faSetup&&(
+              <>
+                <div style={{textAlign:"center",marginBottom:10}}>
+                  <img src={qrURL(otpUrl)} alt="QR" style={{width:150,height:150,borderRadius:8,border:"1.5px solid #e0e7ff"}}/>
+                </div>
+                <div style={{background:"#1e3a5f",borderRadius:7,padding:"8px 12px",marginBottom:8,textAlign:"center"}}>
+                  <div style={{fontSize:10,color:"#93c5fd",marginBottom:2}}>מפתח ידני:</div>
+                  <div style={{fontSize:12,color:"#fff",fontWeight:700,letterSpacing:2,wordBreak:"break-all",fontFamily:"monospace"}}>{newSecret}</div>
+                </div>
+                <label style={{fontSize:12,color:"#555",fontWeight:600}}>קוד אישור מה-Authenticator</label>
+                <input value={totp} onChange={e=>setTotp(e.target.value.replace(/\D/g,"").slice(0,6))}
+                  placeholder="123456" inputMode="numeric"
+                  style={{width:"100%",padding:10,border:"1px solid #c7d2fe",borderRadius:6,marginBottom:10,marginTop:3,boxSizing:"border-box",fontSize:18,textAlign:"center",letterSpacing:8,fontWeight:700}}/>
+                <button onClick={save2fa} style={{width:"100%",padding:10,background:"#059669",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontWeight:700}}>✅ אשר ושמור</button>
+              </>
+            )}
+          </>
+        )}
+
+        {err&&<div style={{color:"#dc2626",fontSize:12,marginTop:10,padding:"6px 10px",background:"#fef2f2",borderRadius:6}}>{err}</div>}
+        {ok&&<div style={{color:"#059669",fontSize:12,marginTop:10,padding:"6px 10px",background:"#f0fdf4",borderRadius:6}}>{ok}</div>}
+      </div>
+    </div>
+  );
+}
+
+// ── APP ───────────────────────────────────────────────────────────────────────
+function App() {
+  const [authCfg,setAuthCfg]=useState(()=>ld(SK.auth,null));
+  const [loggedIn,setLoggedIn]=useState(false);
+  const [showSettings,setShowSettings]=useState(false);
+
+  const [resellers,setResellers]=useState(()=>{
+    const saved=ld(SK.res,null);
+    if(saved){
+      return saved.map(r=>({
+        ...r,
+        contacts:(r.contacts&&r.contacts.length>0)?r.contacts:CONTACTS_RAW.filter(c=>c.resellerId===r.id)
+      }));
+    }
+    return INIT_RESELLERS;
+  });
+  const [customPrices,setCustomPrices]=useState(()=>ld(SK.prices,{corp:null,edu:null,perpCorp:null,perpEdu:null}));
+  const [consumption,setConsumption]=useState(()=>ld(SK.cons,{}));
+
+  const [tab,setTab]=useState("resellers");
+  const [search,setSearch]=useState("");
+  const [sel,setSel]=useState(null);
+  const [editMode,setEditMode]=useState(false);
+  const [editData,setEditData]=useState(null);
+  const [showAddReseller,setShowAddReseller]=useState(false);
+  const [newRes,setNewRes]=useState({name:"",nameHe:"",id:"",discount:12.5,address:"",phone:"",email:""});
+  const [confirmDelete,setConfirmDelete]=useState(null);
+
+  const [priceTab,setPriceTab]=useState("corp");
+  const [priceSearch,setPriceSearch]=useState("");
+  const [priceRes,setPriceRes]=useState("");
+  const [priceModel,setPriceModel]=useState("annual");
+
+  const [calc365Items,setCalc365Items]=useState([{type:"corp",sku:"",qty:1}]);
+  const [calcRes,setCalcRes]=useState("");
+  const [calcModel,setCalcModel]=useState("annual");
+
+  const [calcPerpItems,setCalcPerpItems]=useState([{type:"perpCorp",sku:"",qty:1}]);
+  const [perpExtra,setPerpExtra]=useState(0);
+
+  const now=new Date(); const prevD=new Date(now); prevD.setMonth(prevD.getMonth()-1);
+  const [consMonth,setConsMonth]=useState(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`);
+  const [prevMonth,setPrevMonth]=useState(`${prevD.getFullYear()}-${String(prevD.getMonth()+1).padStart(2,"0")}`);
+
+  const fileRef=useRef();
+  const [xlsxType,setXlsxType]=useState("corp");
+  const [showImport,setShowImport]=useState(false);
+  const [importMsg,setImportMsg]=useState("");
+
+  useEffect(()=>{sv(SK.res,resellers);},[resellers]);
+  useEffect(()=>{sv(SK.cons,consumption);},[consumption]);
+  useEffect(()=>{sv(SK.prices,customPrices);},[customPrices]);
+
+  // Back button handling
+  useEffect(()=>{
+    const h=(e)=>{
+      if(editMode){setEditMode(false);setEditData(null);}
+      else if(showAddReseller){setShowAddReseller(false);}
+      else if(sel){setSel(null);}
+    };
+    window.addEventListener("popstate",h);
+    return()=>window.removeEventListener("popstate",h);
+  },[editMode,showAddReseller,sel]);
+
+  useEffect(()=>{
+    if(sel||editMode||showAddReseller) window.history.pushState({detail:true},"");
+  },[sel,editMode,showAddReseller]);
+
+  if(!authCfg||!authCfg.setup) return <SetupScreen onDone={cfg=>{setAuthCfg(cfg);setLoggedIn(true);}}/>;
+  if(!loggedIn) return <LoginScreen onLogin={()=>setLoggedIn(true)} authCfg={authCfg}/>;
+
+  const getList=t=>customPrices[t]||(t==="corp"?CLOUD_CORP:t==="edu"?CLOUD_EDU:t==="perpCorp"?PERP_CORP:PERP_EDU);
+  const isPerp=priceTab==="perpCorp"||priceTab==="perpEdu";
+  const priceResObj=resellers.find(r=>r.id===priceRes);
+  const priceDisc=priceResObj?priceResObj.discount:12.5;
+  const curList=getList(priceTab);
+  const calcResObj=resellers.find(r=>r.id===calcRes);
+  const calcDisc=calcResObj?calcResObj.discount:12.5;
+
+  const filteredPrices=useMemo(()=>{
+    const q=priceSearch.toLowerCase();
+    return curList.filter(p=>p.desc.toLowerCase().includes(q)||p.sku.toLowerCase().includes(q)||(p.group||"").toLowerCase().includes(q));
+  },[curList,priceSearch,priceTab]);
+
+  const filtered=useMemo(()=>{
+    const q=search.toLowerCase();
+    return resellers.filter(r=>r.name.toLowerCase().includes(q)||(r.nameHe||"").includes(q)||r.id.includes(q)||(r.address||"").includes(q));
+  },[resellers,search]);
+
+  const total365=calc365Items.reduce((s,item)=>{
+    const list=getList(item.type);const prod=list.find(p=>p.sku===item.sku);if(!prod) return s;
+    const base=calcModel==="annual"?prod.annualE:calcModel==="monthly"?prod.monthlyE:prod.mthlyE;
+    if(!base) return s;
+    return s+dp(base,calcDisc)*Number(item.qty||1);
+  },0);
+
+  const totalPerp=calcPerpItems.reduce((s,item)=>{
+    const list=getList(item.type);const prod=list.find(p=>p.sku===item.sku);if(!prod) return s;
+    return s+dp(prod.partnerPrice,perpExtra)*Number(item.qty||1);
+  },0);
+
+  // ── Excel / XLSX import ────────────────────────────────────────────────────
+  function handleExcel(e) {
+    const file=e.target.files[0]; if(!file) return;
+    setImportMsg("⏳ קורא קובץ...");
+    const reader=new FileReader();
+    reader.onload=(ev)=>{
+      try {
+        const wb=XLSX.read(ev.target.result,{type:"array"});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+
+        const isPerp=xlsxType==="perpCorp"||xlsxType==="perpEdu";
+        const parsed=[];
+
+        if(isPerp) {
+          // Perpetual: מחפש עמודות SKU, Description/Name, Partner Price
+          let skuCol=-1,descCol=-1,priceCol=-1;
+          const header=(rows[0]||[]).map(h=>(h||"").toString().toLowerCase());
+          header.forEach((h,i)=>{
+            if(h.includes("sku")) skuCol=i;
+            if(h.includes("desc")||h.includes("name")||h.includes("product")) descCol=i;
+            if(h.includes("partner")&&h.includes("price")) priceCol=i;
+            else if(h.includes("price")&&priceCol===-1) priceCol=i;
+          });
+          rows.slice(1).forEach(row=>{
+            const desc=descCol>=0?(row[descCol]||"").toString().trim():"";
+            const price=priceCol>=0?parseFloat((row[priceCol]||"").toString().replace(/[$,]/g,""))||0:0;
+            if(desc&&price>0){
+              parsed.push({
+                sku:skuCol>=0?(row[skuCol]||"").toString().trim():"",
+                group:"Imported",
+                desc,
+                partnerPrice:price
+              });
+            }
+          });
+        } else {
+          // Cloud 365: מחפש SKU, Description, End User Price (Annual), Monthly, Mthly
+          const header=(rows[0]||[]).map(h=>(h||"").toString().toLowerCase());
+          let skuCol=-1,descCol=-1;
+          const euAnn=[],euMon=[],euMth=[];
+          header.forEach((h,i)=>{
+            if(h.includes("sku")) skuCol=i;
+            if(h.includes("desc")||h.includes("product")) descCol=i;
+            // End User Annual
+            if(h.includes("end user")&&h.includes("annual")&&!h.includes("monthly")) euAnn.push(i);
+            // End User Annual/Monthly (שנתי עם תשלום חודשי)
+            if(h.includes("end user")&&h.includes("monthly")&&!h.includes("commit")&&!euMon.length) euMon.push(i);
+            // Monthly Commit End User
+            if((h.includes("monthly commit")||h.includes("mthly"))&&h.includes("end")) euMth.push(i);
+          });
+          rows.slice(1).forEach(row=>{
+            const desc=descCol>=0?(row[descCol]||"").toString().trim():"";
+            if(!desc) return;
+            const clean=v=>v!=null&&v!==""?parseFloat(v.toString().replace(/[$,]/g,""))||null:null;
+            parsed.push({
+              sku:skuCol>=0?(row[skuCol]||"").toString().trim():"",
+              desc,
+              annualE:euAnn.length?clean(row[euAnn[0]]):null,
+              monthlyE:euMon.length?clean(row[euMon[0]]):null,
+              mthlyE:euMth.length?clean(row[euMth[0]]):null,
+            });
+          });
+        }
+
+        if(!parsed.length){setImportMsg("❌ לא נמצאו נתונים — בדוק שהגיליון הנכון נבחר"); return;}
+        setCustomPrices(p=>({...p,[xlsxType]:parsed}));
+        setImportMsg(`✅ ${parsed.length} מוצרים נטענו בהצלחה!`);
+      } catch(err) {
+        setImportMsg("❌ שגיאה בקריאת הקובץ: "+err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value="";
+  }
+
+  function startEdit(r){setEditData(JSON.parse(JSON.stringify(r)));setEditMode(true);}
+  function saveEdit(){setResellers(p=>p.map(r=>r.id===editData.id?editData:r));setSel(editData);setEditMode(false);setEditData(null);}
+  function addReseller(){
+    if(!newRes.name||!newRes.id) return alert("שם ומספר חובה");
+    if(resellers.find(r=>r.id===newRes.id)) return alert("מספר כבר קיים");
+    setResellers(p=>[...p,{...newRes,contacts:[]}]);
+    setNewRes({name:"",nameHe:"",id:"",discount:12.5,address:"",phone:"",email:""});
+    setShowAddReseller(false);
+  }
+  function confirmDeleteDo(){setResellers(p=>p.filter(r=>r.id!==confirmDelete));setSel(null);setConfirmDelete(null);}
+  const getC=(id,m)=>consumption[`${id}_${m}`]||"";
+  const setC=(id,m,v)=>setConsumption(p=>({...p,[`${id}_${m}`]:v}));
+
+  const navTabs=[["resellers","👥 משווקים"],["prices","💰 מחירונים"],["calc365","🧮 מחשבון 365"],["calcPerp","💿 Perpetual"],["consumption","📊 צריכה"]];
+
+  return (
+    <div dir="rtl" style={{fontFamily:"'Segoe UI',Arial,sans-serif",background:"#f0f4ff",minHeight:"100vh",fontSize:14}}>
+      {showSettings&&<SettingsModal authCfg={authCfg} onSave={setAuthCfg} onClose={()=>setShowSettings(false)}/>}
+      {confirmDelete&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+          <div style={{background:"#fff",borderRadius:12,padding:24,width:280,textAlign:"center"}}>
+            <div style={{fontSize:32,marginBottom:8}}>🗑</div>
+            <div style={{fontWeight:"bold",marginBottom:8}}>למחוק משווק זה?</div>
+            <div style={{fontSize:12,color:"#888",marginBottom:16}}>פעולה זו לא ניתנת לביטול</div>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>setConfirmDelete(null)} style={{flex:1,padding:10,background:"#f1f5f9",border:"none",borderRadius:8,cursor:"pointer",fontWeight:"bold"}}>ביטול</button>
+              <button onClick={confirmDeleteDo} style={{flex:1,padding:10,background:"#dc2626",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontWeight:"bold"}}>מחק</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
+      <div style={{background:"linear-gradient(135deg,#0078d4,#106ebe)",padding:"10px 16px",color:"#fff",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div>
+          <div style={{fontSize:17,fontWeight:"bold"}}>🏢 מנהל משווקים Microsoft</div>
+          <div style={{fontSize:11,opacity:0.8}}>CMS Compucenter · Microsoft Partners</div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>setShowImport(!showImport)} style={{background:"rgba(255,255,255,0.2)",border:"none",color:"#fff",padding:"6px 10px",borderRadius:6,cursor:"pointer",fontSize:12}}>📥 מחירון</button>
+          <button onClick={()=>setShowSettings(true)} style={{background:"rgba(255,255,255,0.2)",border:"none",color:"#fff",padding:"6px 10px",borderRadius:6,cursor:"pointer",fontSize:12}}>⚙️</button>
+          <button onClick={()=>setLoggedIn(false)} style={{background:"rgba(255,255,255,0.2)",border:"none",color:"#fff",padding:"6px 10px",borderRadius:6,cursor:"pointer",fontSize:12}}>🔒</button>
+        </div>
+      </div>
+
+      {/* Import Panel */}
+      {showImport&&(
+        <div style={{background:"#1e3a5f",padding:"12px 16px",borderBottom:"2px solid #93c5fd"}}>
+          <div style={{color:"#fff",fontWeight:"bold",marginBottom:10,fontSize:13}}>📥 עדכון מחירון חודשי מ-Excel</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:8}}>
+            <select value={xlsxType} onChange={e=>setXlsxType(e.target.value)}
+              style={{padding:"7px 10px",borderRadius:6,border:"none",fontSize:13,background:"#fff"}}>
+              <option value="corp">☁️ Cloud Corporate</option>
+              <option value="edu">☁️ Cloud Education</option>
+              <option value="perpCorp">📦 Perpetual Corporate</option>
+              <option value="perpEdu">📦 Perpetual Education</option>
+            </select>
+            <button onClick={()=>fileRef.current.click()}
+              style={{background:"#059669",color:"#fff",border:"none",borderRadius:6,padding:"7px 16px",cursor:"pointer",fontWeight:"bold",fontSize:13}}>
+              📂 בחר קובץ Excel
+            </button>
+            <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={handleExcel} style={{display:"none"}}/>
+            <button onClick={()=>setShowImport(false)} style={{background:"rgba(255,255,255,0.15)",color:"#fff",border:"none",borderRadius:6,padding:"7px 12px",cursor:"pointer",fontSize:13}}>✕</button>
+          </div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {[["corp","Cloud Corp",customPrices.corp],["edu","Cloud Edu",customPrices.edu],["perpCorp","Perp Corp",customPrices.perpCorp],["perpEdu","Perp Edu",customPrices.perpEdu]].map(([k,l,d])=>(
+              <span key={k} style={{fontSize:11,padding:"3px 8px",borderRadius:10,background:d?"#059669":"rgba(255,255,255,0.15)",color:"#fff"}}>
+                {l}: {d?`✅ ${d.length} פריטים`:"מקורי"}
+                {d&&<span style={{cursor:"pointer",marginRight:4}} onClick={()=>setCustomPrices(p=>({...p,[k]:null}))}>✕</span>}
+              </span>
+            ))}
+          </div>
+          {importMsg&&<div style={{marginTop:8,fontSize:12,padding:"6px 10px",borderRadius:6,background:"rgba(255,255,255,0.15)",color:"#fff"}}>{importMsg}</div>}
+          <div style={{marginTop:8,fontSize:11,color:"#93c5fd"}}>
+            💡 פשוט פתח את קובץ ה-Excel המקורי מ-Microsoft ובחר אותו — האפליקציה תזהה את הפורמט אוטומטית
+          </div>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div style={{display:"flex",background:"#fff",borderBottom:"2px solid #e0e7ff",overflowX:"auto"}}>
+        {navTabs.map(([id,label])=>(
+          <button key={id} onClick={()=>{setTab(id);setSel(null);setEditMode(false);setShowAddReseller(false);}}
+            style={{padding:"10px 12px",border:"none",background:"none",cursor:"pointer",fontWeight:tab===id?"bold":"normal",
+              borderBottom:tab===id?"3px solid #0078d4":"3px solid transparent",color:tab===id?"#0078d4":"#444",whiteSpace:"nowrap",fontSize:12}}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{padding:12,maxWidth:900,margin:"0 auto"}}>
+
+        {/* ═══ RESELLERS LIST ═══ */}
+        {tab==="resellers"&&!sel&&!showAddReseller&&(
+          <div>
+            <div style={{display:"flex",gap:8,marginBottom:12}}>
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 חפש שם, מספר, כתובת..."
+                style={{flex:1,padding:"10px 12px",border:"1px solid #c7d2fe",borderRadius:8,fontSize:14,boxSizing:"border-box"}}/>
+              <button onClick={()=>setShowAddReseller(true)} style={{background:"#059669",color:"#fff",border:"none",borderRadius:8,padding:"0 14px",cursor:"pointer",fontWeight:"bold",whiteSpace:"nowrap"}}>+ הוסף</button>
+            </div>
+            <div style={{fontSize:12,color:"#888",marginBottom:8}}>{filtered.length} משווקים</div>
+            {filtered.map(r=>(
+              <div key={r.id} onClick={()=>setSel(r)}
+                style={{background:"#fff",border:"1px solid #e0e7ff",borderRadius:10,padding:"10px 14px",marginBottom:8,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}
+                onMouseEnter={e=>e.currentTarget.style.background="#f0f4ff"}
+                onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+                <div>
+                  <div style={{fontWeight:"bold",color:"#1e40af"}}>{r.name}</div>
+                  {r.nameHe&&<div style={{fontSize:12,color:"#555"}}>{r.nameHe}</div>}
+                  <div style={{fontSize:12,color:"#888"}}>#{r.id} · {r.discount}%{r.address?` · ${r.address}`:""}</div>
+                </div>
+                <div style={{color:"#0078d4",fontSize:18}}>›</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ═══ ADD RESELLER ═══ */}
+        {tab==="resellers"&&showAddReseller&&(
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
+              <button onClick={()=>setShowAddReseller(false)} style={{border:"none",background:"none",color:"#0078d4",cursor:"pointer",fontSize:13}}>← ביטול</button>
+              <button onClick={addReseller} style={{background:"#059669",color:"#fff",border:"none",borderRadius:6,padding:"6px 14px",cursor:"pointer"}}>+ הוסף</button>
+            </div>
+            <div style={{background:"#fff",borderRadius:12,padding:16,border:"1px solid #e0e7ff"}}>
+              <div style={{fontWeight:"bold",marginBottom:12,color:"#1e40af"}}>הוספת משווק חדש</div>
+              {[["name","שם באנגלית *"],["nameHe","שם בעברית"],["id","מספר משווק *"],["address","כתובת"],["phone","טלפון"],["email","אימייל"]].map(([f,l])=>(
+                <div key={f}>
+                  <label style={{fontSize:12,color:"#666"}}>{l}</label>
+                  <input value={newRes[f]||""} onChange={e=>setNewRes(p=>({...p,[f]:e.target.value}))}
+                    style={{width:"100%",padding:8,border:"1px solid #c7d2fe",borderRadius:6,marginBottom:8,boxSizing:"border-box"}}/>
+                </div>
+              ))}
+              <label style={{fontSize:12,color:"#666"}}>אחוז הנחה (%)</label>
+              <input type="number" value={newRes.discount} onChange={e=>setNewRes(p=>({...p,discount:parseFloat(e.target.value)||0}))}
+                style={{width:"100%",padding:8,border:"1px solid #c7d2fe",borderRadius:6,marginBottom:8,boxSizing:"border-box"}}/>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ RESELLER DETAIL ═══ */}
+        {tab==="resellers"&&sel&&!editMode&&(
+          <div>
+            <button onClick={()=>setSel(null)} style={{border:"none",background:"none",color:"#0078d4",cursor:"pointer",fontSize:13,marginBottom:12}}>← חזור</button>
+            <div style={{background:"#fff",borderRadius:12,padding:16,border:"1px solid #e0e7ff"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+                <div>
+                  <div style={{fontSize:18,fontWeight:"bold",color:"#1e40af"}}>{sel.name}</div>
+                  {sel.nameHe&&<div style={{fontSize:14,color:"#555",marginBottom:2}}>{sel.nameHe}</div>}
+                  <div style={{fontSize:12,color:"#888"}}>מספר: {sel.id}</div>
+                </div>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={()=>startEdit(sel)} style={{background:"#0078d4",color:"#fff",border:"none",borderRadius:6,padding:"6px 12px",cursor:"pointer",fontSize:12}}>✏️ ערוך</button>
+                  <button onClick={()=>setConfirmDelete(sel.id)} style={{background:"#fee2e2",color:"#dc2626",border:"none",borderRadius:6,padding:"6px 12px",cursor:"pointer",fontSize:12}}>🗑 מחק</button>
+                </div>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
+                <div style={{background:"#eff6ff",borderRadius:8,padding:10}}>
+                  <div style={{fontSize:11,color:"#888"}}>הנחה</div>
+                  <div style={{fontSize:22,fontWeight:"bold",color:"#1e40af"}}>{sel.discount}%</div>
+                </div>
+                {sel.address&&<div style={{background:"#fefce8",borderRadius:8,padding:10}}>
+                  <div style={{fontSize:11,color:"#888"}}>📍 כתובת</div>
+                  <div style={{fontSize:12,color:"#713f12"}}>{sel.address}</div>
+                </div>}
+              </div>
+              {sel.phone&&<div style={{marginBottom:8}}><a href={`tel:${sel.phone}`} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#0078d4",color:"#fff",padding:"8px 16px",borderRadius:8,textDecoration:"none",fontSize:13}}>📞 {sel.phone}</a></div>}
+              {sel.email&&<div style={{marginBottom:16}}><a href={`mailto:${sel.email}`} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#059669",color:"#fff",padding:"8px 16px",borderRadius:8,textDecoration:"none",fontSize:13}}>✉️ {sel.email}</a></div>}
+              <div style={{fontWeight:"bold",marginBottom:8}}>אנשי קשר ({(sel.contacts||[]).length})</div>
+              {(sel.contacts||[]).map((c,i)=>(
+                <div key={i} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:10,marginBottom:8}}>
+                  <div style={{fontWeight:"bold",marginBottom:4}}>{c.name} <span style={{fontSize:11,color:"#888",fontWeight:"normal"}}>· {c.role}{c.position?` · ${c.position}`:""}</span></div>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                    {c.phone&&<a href={`tel:${c.phone}`} style={{color:"#0078d4",textDecoration:"none",fontSize:12}}>📞 {c.phone}</a>}
+                    {c.email&&<a href={`mailto:${c.email}`} style={{color:"#059669",textDecoration:"none",fontSize:12}}>✉️ {c.email}</a>}
+                  </div>
+                </div>
+              ))}
+              {(!sel.contacts||sel.contacts.length===0)&&<div style={{color:"#aaa",fontSize:12,fontStyle:"italic"}}>אין אנשי קשר</div>}
+            </div>
+          </div>
+        )}
+
+        {/* ═══ EDIT RESELLER ═══ */}
+        {tab==="resellers"&&editMode&&editData&&(
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
+              <button onClick={()=>{setEditMode(false);setEditData(null);}} style={{border:"none",background:"none",color:"#0078d4",cursor:"pointer",fontSize:13}}>← ביטול</button>
+              <button onClick={saveEdit} style={{background:"#059669",color:"#fff",border:"none",borderRadius:6,padding:"6px 14px",cursor:"pointer"}}>💾 שמור</button>
+            </div>
+            <div style={{background:"#fff",borderRadius:12,padding:16,border:"1px solid #e0e7ff"}}>
+              <div style={{fontWeight:"bold",fontSize:16,marginBottom:12,color:"#1e40af"}}>{editData.name}</div>
+              {[["nameHe","שם בעברית"],["address","כתובת"],["phone","טלפון ראשי"],["email","אימייל ראשי"]].map(([f,l])=>(
+                <div key={f}>
+                  <label style={{fontSize:12,color:"#666"}}>{l}</label>
+                  <input value={editData[f]||""} onChange={e=>setEditData(p=>({...p,[f]:e.target.value}))}
+                    style={{width:"100%",padding:8,border:"1px solid #c7d2fe",borderRadius:6,marginBottom:8,boxSizing:"border-box"}}/>
+                </div>
+              ))}
+              <label style={{fontSize:12,color:"#666"}}>אחוז הנחה (%)</label>
+              <input type="number" value={editData.discount} onChange={e=>setEditData(p=>({...p,discount:parseFloat(e.target.value)||0}))}
+                style={{width:"100%",padding:8,border:"1px solid #c7d2fe",borderRadius:6,marginBottom:16,boxSizing:"border-box"}}/>
+              <div style={{fontWeight:"bold",marginBottom:8}}>אנשי קשר</div>
+              {(editData.contacts||[]).map((c,i)=>(
+                <div key={i} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:10,marginBottom:8}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
+                    {[["name","שם"],["position","תפקיד"],["phone","טלפון"],["email","אימייל"]].map(([f,l])=>(
+                      <div key={f}>
+                        <label style={{fontSize:11,color:"#888"}}>{l}</label>
+                        <input value={c[f]||""} onChange={e=>{const nc=[...editData.contacts];nc[i]={...nc[i],[f]:e.target.value};setEditData(p=>({...p,contacts:nc}))}}
+                          style={{width:"100%",padding:6,border:"1px solid #d1d5db",borderRadius:4,fontSize:12,boxSizing:"border-box"}}/>
+                      </div>
+                    ))}
+                  </div>
+                  <select value={c.role||"עסקי"} onChange={e=>{const nc=[...editData.contacts];nc[i]={...nc[i],role:e.target.value};setEditData(p=>({...p,contacts:nc}))}}
+                    style={{padding:"4px 8px",border:"1px solid #d1d5db",borderRadius:4,fontSize:12,marginBottom:6}}>
+                    <option value="עסקי">עסקי</option><option value="טכני">טכני</option>
+                  </select>
+                  <button onClick={()=>setEditData(p=>({...p,contacts:p.contacts.filter((_,idx)=>idx!==i)}))}
+                    style={{background:"#fee2e2",color:"#dc2626",border:"none",borderRadius:4,padding:"4px 8px",cursor:"pointer",fontSize:11}}>🗑 הסר</button>
+                </div>
+              ))}
+              <button onClick={()=>setEditData(p=>({...p,contacts:[...(p.contacts||[]),{name:"",role:"עסקי",position:"",email:"",phone:""}]}))}
+                style={{background:"#eff6ff",color:"#0078d4",border:"1px dashed #93c5fd",borderRadius:6,padding:"8px 14px",cursor:"pointer",width:"100%",marginTop:4}}>+ הוסף איש קשר</button>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ PRICES ═══ */}
+        {tab==="prices"&&(
+          <div>
+            <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}>
+              {[["corp","☁️ Cloud Corp"],["edu","🎓 Cloud חינוך"],["perpCorp","💿 Perp Corp"],["perpEdu","🎓 Perp חינוך"]].map(([k,l])=>(
+                <button key={k} onClick={()=>setPriceTab(k)} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #c7d2fe",cursor:"pointer",background:priceTab===k?"#0078d4":"#fff",color:priceTab===k?"#fff":"#374151",fontSize:12}}>{l}</button>
+              ))}
+              {customPrices[priceTab]&&<button onClick={()=>setCustomPrices(p=>({...p,[priceTab]:null}))} style={{padding:"4px 8px",borderRadius:4,border:"1px solid #f59e0b",background:"#fef3c7",color:"#92400e",fontSize:11,cursor:"pointer"}}>↺ איפוס</button>}
+            </div>
+            <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+              <input value={priceSearch} onChange={e=>setPriceSearch(e.target.value)} placeholder="🔍 חפש מוצר..."
+                style={{flex:1,minWidth:150,padding:"8px 10px",border:"1px solid #c7d2fe",borderRadius:6,fontSize:13}}/>
+              {!isPerp&&<select value={priceRes} onChange={e=>setPriceRes(e.target.value)} style={{padding:"8px 10px",border:"1px solid #c7d2fe",borderRadius:6,fontSize:12}}>
+                <option value="">ברירת מחדל (12.5%)</option>
+                {resellers.map(r=><option key={r.id} value={r.id}>{r.name} ({r.discount}%)</option>)}
+              </select>}
+              {!isPerp&&<select value={priceModel} onChange={e=>setPriceModel(e.target.value)} style={{padding:"8px 10px",border:"1px solid #c7d2fe",borderRadius:6,fontSize:12}}>
+                <option value="annual">שנתי/שנתי</option>
+                <option value="monthly">שנתי/חודשי</option>
+                <option value="mthly">חודשי/חודשי</option>
+              </select>}
+            </div>
+            {isPerp&&<div style={{background:"#fef3c7",border:"1px solid #fcd34d",borderRadius:8,padding:"8px 12px",marginBottom:10,fontSize:12,color:"#92400e"}}>💡 מחיר משווק = Partner Price פחות 2% · לקוח סופי = Partner Price</div>}
+            {!isPerp&&<div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,padding:"8px 12px",marginBottom:10,fontSize:12,color:"#1e40af"}}>💡 מחיר משווק = End User Price פחות {priceDisc}% · לקוח סופי = End User Price</div>}
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",background:"#fff",borderRadius:8,fontSize:12}}>
+                <thead><tr style={{background:"#0078d4",color:"#fff"}}>
+                  <th style={{padding:"8px 10px",textAlign:"right"}}>מוצר</th>
+                  <th style={{padding:"8px 6px",textAlign:"center",background:"#1a6fc4"}}>מחיר משווק</th>
+                  <th style={{padding:"8px 6px",textAlign:"center"}}>לקוח סופי</th>
+                </tr></thead>
+                <tbody>
+                  {filteredPrices.slice(0,100).map((p,i)=>{
+                    if(isPerp){return(<tr key={p.sku} style={{background:i%2===0?"#f8fafc":"#fff",borderBottom:"1px solid #e2e8f0"}}>
+                      <td style={{padding:"6px 10px"}}><div style={{fontWeight:"bold"}}>{p.desc}</div><div style={{fontSize:10,color:"#aaa"}}>{p.sku} · {p.group}</div></td>
+                      <td style={{padding:"6px",textAlign:"center",fontWeight:"bold",color:"#0078d4",background:"#eff6ff"}}>{fmt(dp(p.partnerPrice,2))}</td>
+                      <td style={{padding:"6px",textAlign:"center",color:"#888"}}>{fmt(p.partnerPrice)}</td>
+                    </tr>);}
+                    const eu=priceModel==="annual"?p.annualE:priceModel==="monthly"?p.monthlyE:p.mthlyE;
+                    return(<tr key={p.sku} style={{background:i%2===0?"#f8fafc":"#fff",borderBottom:"1px solid #e2e8f0"}}>
+                      <td style={{padding:"6px 10px"}}><div style={{fontWeight:"bold"}}>{p.desc}</div><div style={{fontSize:10,color:"#aaa"}}>{p.sku}</div></td>
+                      <td style={{padding:"6px",textAlign:"center",fontWeight:"bold",color:"#0078d4",background:"#eff6ff"}}>{fmt(eu!=null?dp(eu,priceDisc):null)}</td>
+                      <td style={{padding:"6px",textAlign:"center",color:"#888"}}>{fmt(eu)}</td>
+                    </tr>);
+                  })}
+                </tbody>
+              </table>
+              {filteredPrices.length>100&&<div style={{textAlign:"center",padding:8,color:"#888",fontSize:11}}>מציג 100 מתוך {filteredPrices.length}</div>}
+            </div>
+          </div>
+        )}
+
+        {/* ═══ CALC 365 ═══ */}
+        {tab==="calc365"&&(
+          <div>
+            <div style={{background:"#fff",borderRadius:12,padding:16,border:"1px solid #e0e7ff",marginBottom:12}}>
+              <div style={{fontWeight:"bold",marginBottom:10,color:"#1e40af"}}>🧮 מחשבון Cloud 365</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:8}}>
+                <div>
+                  <label style={{fontSize:12,color:"#666"}}>משווק</label>
+                  <select value={calcRes} onChange={e=>setCalcRes(e.target.value)} style={{width:"100%",padding:8,border:"1px solid #c7d2fe",borderRadius:6,fontSize:12}}>
+                    <option value="">ברירת מחדל (12.5%)</option>
+                    {resellers.map(r=><option key={r.id} value={r.id}>{r.name} ({r.discount}%)</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{fontSize:12,color:"#666"}}>מודל תשלום</label>
+                  <select value={calcModel} onChange={e=>setCalcModel(e.target.value)} style={{width:"100%",padding:8,border:"1px solid #c7d2fe",borderRadius:6,fontSize:12}}>
+                    <option value="annual">שנתי/שנתי</option>
+                    <option value="monthly">שנתי/חודשי</option>
+                    <option value="mthly">חודשי/חודשי</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{fontSize:12,color:"#555"}}>הנחה: <strong style={{color:"#0078d4"}}>{calcDisc}%</strong> מה-End User Price</div>
+            </div>
+            {calc365Items.map((item,i)=>{
+              const list=getList(item.type);
+              const prod=list.find(p=>p.sku===item.sku);
+              let up=null;
+              if(prod){const base=calcModel==="annual"?prod.annualE:calcModel==="monthly"?prod.monthlyE:prod.mthlyE;if(base)up=dp(base,calcDisc);}
+              return(
+                <div key={i} style={{background:"#fff",border:"1px solid #e0e7ff",borderRadius:10,padding:12,marginBottom:8}}>
+                  <div style={{display:"grid",gridTemplateColumns:"auto 1fr auto auto",gap:8,alignItems:"center"}}>
+                    <select value={item.type} onChange={e=>setCalc365Items(p=>p.map((x,idx)=>idx===i?{...x,type:e.target.value,sku:""}:x))}
+                      style={{padding:6,border:"1px solid #c7d2fe",borderRadius:5,fontSize:11}}>
+                      <option value="corp">☁️ Corporate</option>
+                      <option value="edu">🎓 חינוך</option>
+                    </select>
+                    <select value={item.sku} onChange={e=>setCalc365Items(p=>p.map((x,idx)=>idx===i?{...x,sku:e.target.value}:x))}
+                      style={{padding:6,border:"1px solid #c7d2fe",borderRadius:5,fontSize:11}}>
+                      <option value="">-- בחר מוצר --</option>
+                      {list.map(p=><option key={p.sku} value={p.sku}>{p.desc}</option>)}
+                    </select>
+                    <input type="number" min="1" value={item.qty} onChange={e=>setCalc365Items(p=>p.map((x,idx)=>idx===i?{...x,qty:e.target.value}:x))}
+                      style={{width:60,padding:6,border:"1px solid #c7d2fe",borderRadius:5,fontSize:12,textAlign:"center"}}/>
+                    <button onClick={()=>setCalc365Items(p=>p.filter((_,idx)=>idx!==i))} style={{background:"#fee2e2",color:"#dc2626",border:"none",borderRadius:5,padding:"6px 8px",cursor:"pointer"}}>✕</button>
+                  </div>
+                  {up!=null&&<div style={{marginTop:6,fontSize:12,color:"#059669"}}>יחידה: {fmt(up)} · סה"כ: <strong>{fmt(up*Number(item.qty||1))}</strong></div>}
+                </div>
+              );
+            })}
+            <button onClick={()=>setCalc365Items(p=>[...p,{type:"corp",sku:"",qty:1}])}
+              style={{width:"100%",padding:10,background:"#eff6ff",color:"#0078d4",border:"1px dashed #93c5fd",borderRadius:8,cursor:"pointer",marginBottom:12}}>+ הוסף מוצר</button>
+            <div style={{background:"linear-gradient(135deg,#0078d4,#106ebe)",borderRadius:12,padding:16,color:"#fff",textAlign:"center"}}>
+              <div style={{fontSize:13,opacity:0.85}}>סה"כ Cloud 365</div>
+              <div style={{fontSize:32,fontWeight:"bold"}}>{fmt(total365)}</div>
+              <div style={{fontSize:11,opacity:0.7}}>הנחה {calcDisc}% מ-End User Price</div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ CALC PERP ═══ */}
+        {tab==="calcPerp"&&(
+          <div>
+            <div style={{background:"#fff",borderRadius:12,padding:16,border:"1px solid #e0e7ff",marginBottom:12}}>
+              <div style={{fontWeight:"bold",marginBottom:10,color:"#7c3aed"}}>💿 מחשבון Perpetual</div>
+              <div style={{background:"#fef3c7",border:"1px solid #fcd34d",borderRadius:8,padding:"10px 12px",marginBottom:10,fontSize:12,color:"#92400e"}}>
+                💡 מחיר = Partner Price פחות % שאתה מגדיר
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontSize:13,color:"#7c3aed",fontWeight:"bold"}}>הנחה:</span>
+                <input type="number" min="0" max="50" step="0.5" value={perpExtra}
+                  onChange={e=>setPerpExtra(parseFloat(e.target.value)||0)}
+                  style={{width:80,padding:"6px 10px",border:"2px solid #7c3aed",borderRadius:8,fontSize:16,textAlign:"center",fontWeight:"bold"}}/>
+                <span style={{fontSize:13,color:"#7c3aed"}}>%</span>
+              </div>
+            </div>
+            {calcPerpItems.map((item,i)=>{
+              const list=getList(item.type);
+              const prod=list.find(p=>p.sku===item.sku);
+              const up=prod?dp(prod.partnerPrice,perpExtra):null;
+              return(
+                <div key={i} style={{background:"#fff",border:"1px solid #e0e7ff",borderRadius:10,padding:12,marginBottom:8}}>
+                  <div style={{display:"grid",gridTemplateColumns:"auto 1fr auto auto",gap:8,alignItems:"center"}}>
+                    <select value={item.type} onChange={e=>setCalcPerpItems(p=>p.map((x,idx)=>idx===i?{...x,type:e.target.value,sku:""}:x))}
+                      style={{padding:6,border:"1px solid #c7d2fe",borderRadius:5,fontSize:11}}>
+                      <option value="perpCorp">🏢 Corporate</option>
+                      <option value="perpEdu">🎓 חינוך</option>
+                    </select>
+                    <select value={item.sku} onChange={e=>setCalcPerpItems(p=>p.map((x,idx)=>idx===i?{...x,sku:e.target.value}:x))}
+                      style={{padding:6,border:"1px solid #c7d2fe",borderRadius:5,fontSize:11}}>
+                      <option value="">-- בחר מוצר --</option>
+                      {list.map(p=><option key={p.sku} value={p.sku}>{p.desc} ({p.group})</option>)}
+                    </select>
+                    <input type="number" min="1" value={item.qty} onChange={e=>setCalcPerpItems(p=>p.map((x,idx)=>idx===i?{...x,qty:e.target.value}:x))}
+                      style={{width:60,padding:6,border:"1px solid #c7d2fe",borderRadius:5,fontSize:12,textAlign:"center"}}/>
+                    <button onClick={()=>setCalcPerpItems(p=>p.filter((_,idx)=>idx!==i))} style={{background:"#fee2e2",color:"#dc2626",border:"none",borderRadius:5,padding:"6px 8px",cursor:"pointer"}}>✕</button>
+                  </div>
+                  {up!=null&&prod&&<div style={{marginTop:6,fontSize:11,color:"#7c3aed"}}>
+                    {fmt(prod.partnerPrice)} → -{perpExtra}% → <strong style={{color:"#059669"}}>{fmt(up)}</strong> × {item.qty} = <strong style={{color:"#059669"}}>{fmt(up*Number(item.qty||1))}</strong>
+                  </div>}
+                </div>
+              );
+            })}
+            <button onClick={()=>setCalcPerpItems(p=>[...p,{type:"perpCorp",sku:"",qty:1}])}
+              style={{width:"100%",padding:10,background:"#f5f3ff",color:"#7c3aed",border:"1px dashed #c4b5fd",borderRadius:8,cursor:"pointer",marginBottom:12}}>+ הוסף מוצר</button>
+            <div style={{background:"linear-gradient(135deg,#7c3aed,#6d28d9)",borderRadius:12,padding:16,color:"#fff",textAlign:"center"}}>
+              <div style={{fontSize:13,opacity:0.85}}>סה"כ Perpetual</div>
+              <div style={{fontSize:32,fontWeight:"bold"}}>{fmt(totalPerp)}</div>
+              <div style={{fontSize:11,opacity:0.7}}>Partner Price -{perpExtra}%</div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ CONSUMPTION ═══ */}
+        {tab==="consumption"&&(
+          <div>
+            <div style={{background:"#fff",borderRadius:10,padding:12,border:"1px solid #e0e7ff",marginBottom:12}}>
+              <div style={{fontWeight:"bold",marginBottom:8,color:"#1e40af"}}>📊 מעקב צריכה</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <div><label style={{fontSize:12,color:"#666"}}>חודש נוכחי</label><input type="month" value={consMonth} onChange={e=>setConsMonth(e.target.value)} style={{width:"100%",padding:8,border:"1px solid #c7d2fe",borderRadius:6,boxSizing:"border-box"}}/></div>
+                <div><label style={{fontSize:12,color:"#666"}}>חודש קודם</label><input type="month" value={prevMonth} onChange={e=>setPrevMonth(e.target.value)} style={{width:"100%",padding:8,border:"1px solid #c7d2fe",borderRadius:6,boxSizing:"border-box"}}/></div>
+              </div>
+            </div>
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",background:"#fff",borderRadius:8,fontSize:12}}>
+                <thead><tr style={{background:"#0078d4",color:"#fff"}}>
+                  <th style={{padding:"8px 10px",textAlign:"right"}}>משווק</th>
+                  <th style={{padding:"8px",textAlign:"center",minWidth:110}}>חודש קודם</th>
+                  <th style={{padding:"8px",textAlign:"center",minWidth:110}}>חודש נוכחי</th>
+                  <th style={{padding:"8px",textAlign:"center",minWidth:80}}>שינוי</th>
+                </tr></thead>
+                <tbody>
+                  {resellers.map((r,i)=>{
+                    const prev=parseFloat(getC(r.id,prevMonth))||0;
+                    const curr=parseFloat(getC(r.id,consMonth))||0;
+                    const diff=curr-prev;
+                    const pct=prev>0?((diff/prev)*100).toFixed(0):null;
+                    return(<tr key={r.id} style={{background:i%2===0?"#f8fafc":"#fff",borderBottom:"1px solid #e2e8f0"}}>
+                      <td style={{padding:"6px 10px"}}><div style={{fontWeight:"bold"}}>{r.name}</div>{r.nameHe&&<div style={{fontSize:11,color:"#777"}}>{r.nameHe}</div>}</td>
+                      <td style={{padding:"4px 6px",textAlign:"center"}}><input type="number" value={getC(r.id,prevMonth)} onChange={e=>setC(r.id,prevMonth,e.target.value)} placeholder="0" style={{width:90,padding:4,border:"1px solid #d1d5db",borderRadius:4,textAlign:"center",fontSize:12}}/></td>
+                      <td style={{padding:"4px 6px",textAlign:"center"}}><input type="number" value={getC(r.id,consMonth)} onChange={e=>setC(r.id,consMonth,e.target.value)} placeholder="0" style={{width:90,padding:4,border:"1px solid #d1d5db",borderRadius:4,textAlign:"center",fontSize:12}}/></td>
+                      <td style={{padding:"4px 6px",textAlign:"center"}}>{(prev>0||curr>0)&&<span style={{color:diff>0?"#059669":diff<0?"#dc2626":"#888",fontWeight:"bold"}}>{diff>0?"▲":diff<0?"▼":"➡"} {Math.abs(diff).toFixed(0)}{pct?` (${pct}%)`:""}</span>}</td>
+                    </tr>);
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+
+</script>
+</body>
+</html>

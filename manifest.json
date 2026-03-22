@@ -1,0 +1,25 @@
+{
+  "name": "מנהל משווקים Microsoft",
+  "short_name": "MS Partners",
+  "description": "ניהול משווקים ומחירוני Microsoft - CMS Compucenter",
+  "start_url": "/Microsoftpartners/",
+  "scope": "/Microsoftpartners/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0078d4",
+  "theme_color": "#0078d4",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Microsoft_logo.svg/192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Microsoft_logo.svg/512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
